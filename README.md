@@ -13,4 +13,8 @@ So here we have it folks, last week of siege, one last project, really good time
 - [ ] game-pieces
     - [ ] red and black
     - [ ] queen piece has different vibe
-- [ ] intro-dialogue
+- [ ] intro-screen
+- [ ] moves
+    - [ ] Have legal moves
+    - [ ] Have `chess.com` style thing that shows where player can move
+    - [ ] Have a red outline circle for something that the player can capture

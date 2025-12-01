@@ -49,6 +49,20 @@ h1 {
     align-items: center;
     justify-content: center;
     aspect-ratio: 1;
+    position: relative;
+}
+
+.square.highlight-move::after {
+    content: '';
+    position: absolute;
+    width: 26%;
+    height: 26%;
+    border-radius: 50%;
+    background: rgba(236, 240, 241, 0.65);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
 }
 
 .square.light {
@@ -77,6 +91,7 @@ h1 {
     color: #fff;
     cursor: grab;
     user-select: none;
+    position: relative;
 }
 
 .piece.black {
@@ -94,6 +109,24 @@ h1 {
 .piece.selected {
     outline: 3px solid rgba(255,255,255,0.6);
     outline-offset: 2px;
+}
+
+.piece.king {
+    box-shadow: inset 0 0 0 3px rgba(255, 215, 0, 0.85);
+}
+
+.piece.highlight-capture::after {
+    content: '';
+    position: absolute;
+    width: 45%;
+    height: 45%;
+    border-radius: 50%;
+    background: rgba(231, 76, 60, 0.9);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px rgba(231, 76, 60, 0.75);
+    pointer-events: none;
 }
 
 @media (max-width: 600px) {
