@@ -66,6 +66,36 @@ h1 {
     border-radius: 50%;
 }
 
+.piece {
+    width: 70%;
+    height: 70%;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #fff;
+    cursor: grab;
+    user-select: none;
+}
+
+.piece.black {
+    background: radial-gradient(circle at 30% 30%, #4c4b63, #1a1a24);
+}
+
+.piece.red {
+    background: radial-gradient(circle at 30% 30%, #ff6b6b, #8b1e1e);
+}
+
+.piece:active {
+    cursor: grabbing;
+}
+
+.piece.selected {
+    outline: 3px solid rgba(255,255,255,0.6);
+    outline-offset: 2px;
+}
+
 @media (max-width: 600px) {
     .container {
         gap: 1rem;
