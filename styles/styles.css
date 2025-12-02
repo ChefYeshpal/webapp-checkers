@@ -159,15 +159,6 @@ h1::after {
     pointer-events: none;
 }
 
-/*
-.piece.black {
-    background: radial-gradient(circle at 30% 30%, #4c4b63, #1a1a24);
-}
-
-.piece.red {
-    background: radial-gradient(circle at 30% 30%, #ff6b6b, #8b1e1e);
-}
-*/
 
 .piece:active {
     cursor: grabbing;
@@ -177,11 +168,7 @@ h1::after {
     outline: 3px solid rgba(255,255,255,0.6);
     outline-offset: 2px;
 }
-/*
-.piece.king {
-    box-shadow: inset 0 0 0 3px rgba(255, 215, 0, 0.85);
-}
-*/
+
 .piece.highlight-capture::after {
     content: '';
     position: absolute;

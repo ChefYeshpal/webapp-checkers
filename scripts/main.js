@@ -33,7 +33,6 @@ const forcedMoveSquares = new Set();
 
 const getSquareElement = (row, col) => document.getElementById(`square-${row}-${col}`);
 
-// asses lmnaao
 const getPieceAssetPath = (color, isKing) => {
     if (color === 'black') {
         return isKing ? 'assets/blackpiece_king.png' : 'assets/blackpiece.png';
@@ -233,7 +232,6 @@ const handleResultAction = () => {
     state.currentPlayer = null;
     state.draggedPiece = null;
     state.activeChainPiece = null;
-    //state.moveLookup = new Map();
     clearForcedMoveHighlights();
     clearLastMoveHighlights();
 };
