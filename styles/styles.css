@@ -77,6 +77,15 @@ h1::after {
     justify-content: center;
     aspect-ratio: 1;
     position: relative;
+    transition: background-color 0.25s ease;
+}
+
+.square.last-move-from {
+    background-color: #3a4154;
+}
+
+.square.last-move-to {
+    background-color: #4c556e;
 }
 
 .square.force-move::before,
@@ -90,23 +99,13 @@ h1::after {
 }
 
 .square.force-move::before {
-    border: 2px dashed rgba(255, 99, 132, 0.7);
+    border: 2px dashed rgba(255, 255, 255, 0.45);
     animation: forceOrbit 1s ease-in-out infinite;
-    box-shadow: 0 0 12px rgba(255, 99, 132, 0.35);
 }
 
 .square.force-move::after {
-    border: 2px solid rgba(72, 219, 251, 0.45);
+    border: 2px solid rgba(255, 255, 255, 0.15);
     animation: forceOrbitReverse 1.2s linear infinite;
-    box-shadow: 0 0 10px rgba(72, 219, 251, 0.35);
-}
-
-.square.last-move-from {
-    box-shadow: inset 0 0 0 3px rgba(255, 214, 102, 0.65);
-}
-
-.square.last-move-to {
-    box-shadow: inset 0 0 0 3px rgba(72, 219, 251, 0.6);
 }
 
 .square.highlight-move::after {

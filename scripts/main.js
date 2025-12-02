@@ -23,13 +23,13 @@ const state = {
     currentPlayer: null,
     moveLookup: new Map(),
     activeChainPiece: null,
-    gameOver: true
+    gameOver: true,
+    lastMoveSquares: { from: null, to: null }
 };
 
 const highlightedSquares = new Set();
 const highlightedCapturePieces = new Set();
 const forcedMoveSquares = new Set();
-const lastMoveSquares = new Set();
 
 const getSquareElement = (row, col) => document.getElementById(`square-${row}-${col}`);
 
@@ -102,29 +102,32 @@ const clearHighlights = () => {
     highlightedCapturePieces.clear();
 };
 
-// brr go round round
-const clearForcedMoveHighlights = () => {
-    forcedMoveSquares.forEach((square) => square.classList.remove('force-move'));
-    forcedMoveSquares.clear();
-};
-
 const clearLastMoveHighlights = () => {
-    lastMoveSquares.forEach((square) => {
-        square.classList.remove('last-move-from', 'last-move-to');
-    });
-    lastMoveSquares.clear();
+    if (state.lastMoveSquares.from) {
+        state.lastMoveSquares.from.classList.remove('last-move-from');
+    }
+    if (state.lastMoveSquares.to) {
+        state.lastMoveSquares.to.classList.remove('last-move-to');
+    }
+    state.lastMoveSquares = { from: null, to: null };
 };
 
 const setLastMoveHighlights = (fromSquare, toSquare) => {
     clearLastMoveHighlights();
     if (fromSquare) {
         fromSquare.classList.add('last-move-from');
-        lastMoveSquares.add(fromSquare);
+        state.lastMoveSquares.from = fromSquare;
     }
     if (toSquare) {
         toSquare.classList.add('last-move-to');
-        lastMoveSquares.add(toSquare);
+        state.lastMoveSquares.to = toSquare;
     }
+};
+
+// brr go round round
+const clearForcedMoveHighlights = () => {
+    forcedMoveSquares.forEach((square) => square.classList.remove('force-move'));
+    forcedMoveSquares.clear();
 };
 
 const addForcedHighlight = (square) => {
@@ -232,6 +235,7 @@ const handleResultAction = () => {
     state.activeChainPiece = null;
     //state.moveLookup = new Map();
     clearForcedMoveHighlights();
+    clearLastMoveHighlights();
 };
 
 const highlightAvailableMoves = (legal) => {
@@ -418,9 +422,9 @@ const executeMove = (move) => {
     const piece = state.selectedPiece;
     if (!piece) return;
 
+    const originSquare = getSquareElement(move.from.row, move.from.col);
     const targetSquare = getSquareElement(move.to.row, move.to.col);
     if (!targetSquare) return;
-    const fromSquare = getSquareElement(move.from.row, move.from.col);
 
     const result = CheckersRules.applyMove(boardState, move);
     targetSquare.appendChild(piece);
@@ -430,8 +434,6 @@ const executeMove = (move) => {
         to: move.to,
         captured: move.captured || null
     });
-
-    setLastMoveHighlights(fromSquare, targetSquare);
 
     if (move.type === 'capture' && move.captured) {
         const capturedSquare = getSquareElement(move.captured.row, move.captured.col);
@@ -458,6 +460,7 @@ const executeMove = (move) => {
             state.activeChainPiece = piece;
             selectPiece(piece);
             applyAvailableMoves({ moves: [], captures: followUp.captures });
+            setLastMoveHighlights(originSquare, targetSquare);
             logDebug('Continuing capture chain', { from: move.to, options: followUp.captures.length });
             updateForcedMoveHighlights();
             return;
@@ -466,6 +469,7 @@ const executeMove = (move) => {
 
     state.activeChainPiece = null;
     clearSelection();
+    setLastMoveHighlights(originSquare, targetSquare);
     state.currentPlayer = state.currentPlayer === 'black' ? 'red' : 'black';
     logDebug('Turn switched', { currentPlayer: state.currentPlayer });
     updateForcedMoveHighlights();
