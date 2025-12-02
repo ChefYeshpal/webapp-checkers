@@ -79,7 +79,8 @@ const CheckersRules = (() => {
 
 		return { moves, captures };
 	};
-
+	
+	// mmm capture yum yum
 	const playerHasCapture = (state, player) => {
 		for (let row = 0; row < SIZE; row++) {
 			for (let col = 0; col < SIZE; col++) {

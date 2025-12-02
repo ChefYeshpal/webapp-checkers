@@ -16,14 +16,37 @@ const highlightedCapturePieces = new Set();
 
 const getSquareElement = (row, col) => document.getElementById(`square-${row}-${col}`);
 
+// asses lmnaao
+const getPieceAssetPath = (color, isKing) => {
+    if (color === 'black') {
+        return isKing ? 'assets/blackpiece_king.png' : 'assets/blackpiece.png';
+    }
+    return isKing ? 'assets/redpiece_king.png' : 'assets/redpiece.png';
+};
+
+const updatePieceVisuals = (piece, isKing) => {
+    const color = piece.dataset.color;
+    piece.dataset.king = isKing ? 'true' : 'false';
+    piece.classList.toggle('king', isKing);
+    const img = piece.querySelector('img');
+    if (img) {
+        img.src = getPieceAssetPath(color, isKing);
+        img.alt = `${color} ${isKing ? 'king' : 'checker'}`;
+    }
+};
+
 const createPiece = (color, isKing = false) => {
     const piece = document.createElement('div');
     piece.classList.add('piece', color);
     if (isKing) piece.classList.add('king');
-    piece.textContent = color === 'black' ? 'B' : 'R';
     piece.dataset.color = color;
     piece.dataset.king = isKing ? 'true' : 'false';
     piece.draggable = true;
+    const img = document.createElement('img');
+    img.src = getPieceAssetPath(color, isKing);
+    img.alt = `${color} ${isKing ? 'king' : 'checker'}`;
+    img.draggable = false;
+    piece.appendChild(img);
     return piece;
 };
 
@@ -168,8 +191,7 @@ const executeMove = (move) => {
     }
 
     if (result.piece) {
-        piece.dataset.king = result.piece.isKing ? 'true' : 'false';
-        piece.classList.toggle('king', result.piece.isKing);
+        updatePieceVisuals(piece, result.piece.isKing);
     }
 
     clearHighlights();
