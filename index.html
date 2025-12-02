@@ -7,7 +7,28 @@
         <link rel="stylesheet" href="styles/styles.css">
     </head>
     <body>
-    <div class="container">
+    <div class="intro-overlay" id="introOverlay">
+        <div class="intro-dialog">
+            <p class="intro-eyebrow">Lonely Checkers</p>
+            <h2>Ready to play?</h2>
+            <p class="intro-copy">
+                Quick refresher before we dive in. Capture diagonally, stack kings.
+            </p>
+            <ul class="intro-rules">
+                <li>Move diagonally forward on dark squares only.</li>
+                <li>Captures are mandatory when available.</li>
+                <li>Reach the far side to crown a king and unlock backward moves.</li>
+            </ul>
+            <div class="intro-choice">
+                <span>Play as?</span>
+                <div class="intro-buttons">
+                    <button type="button" class="intro-button" data-player-choice="black">Black</button>
+                    <button type="button" class="intro-button" data-player-choice="red">Red</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container game-container game-hidden">
         <h1>Lonely Checkers :')</h1>
         <div class="game-board" id="gameBoard"></div>
     </div>

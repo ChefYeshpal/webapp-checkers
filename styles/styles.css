@@ -24,6 +24,15 @@ body {
     width: 100%;
 }
 
+.game-container {
+    transition: opacity 0.4s ease;
+}
+
+.game-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
 h1 {
     font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 600;
@@ -152,8 +161,159 @@ h1::after {
     pointer-events: none;
 }
 
+/* I find myself to be rather proud of this */
+.intro-overlay {
+    position: fixed;
+    inset: 0;
+    background: #050505;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 999;
+    transition: opacity 0.35s ease;
+}
+
+.intro-overlay.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.intro-dialog {
+    width: min(480px, 90vw);
+    background: #161616;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 20px 80px rgba(0, 0, 0, 0.65);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.intro-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.4em;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.intro-dialog h2 {
+    font-size: clamp(1.75rem, 5vw, 2.5rem);
+    font-weight: 600;
+}
+
+.intro-copy {
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.6;
+}
+
+.intro-rules {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.intro-rules li {
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.intro-rules li::before {
+    content: '';
+    position: absolute;
+    left: 0.2rem;
+    top: 0.55rem;
+    width: 0.35rem;
+    height: 0.35rem;
+    background: #f5f5f5;
+    border-radius: 50%;
+}
+
+.intro-choice {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+}
+
+.intro-buttons {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.intro-button {
+    flex: 1;
+    border: none;
+    background: #111;
+    color: #f5f5f5;
+    padding: 0.85rem 1.5rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 600;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.25s ease, color 0.25s ease, background 0.25s ease;
+    cursor: pointer;
+}
+
+.intro-button::before,
+.intro-button::after {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 50%;
+    opacity: 0;
+    transform: scale(0.8);
+}
+
+.intro-button::after {
+    border-color: rgba(255, 255, 255, 0.35);
+}
+
+.intro-button:hover {
+    background: #1c1c1c;
+    transform: translateY(-2px);
+}
+
+.intro-button:hover::before,
+.intro-button:hover::after {
+    opacity: 1;
+    animation: orbit 1.4s linear infinite;
+}
+
+.intro-button:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.4);
+    outline-offset: 4px;
+}
+
+@keyframes orbit {
+    0% {
+        transform: rotate(0deg) scale(0.95);
+    }
+    50% {
+        transform: rotate(180deg) scale(1.05);
+    }
+    100% {
+        transform: rotate(360deg) scale(0.95);
+    }
+}
+
 @media (max-width: 600px) {
     .container {
         gap: 1rem;
+    }
+
+    .intro-dialog {
+        padding: 1.5rem;
+    }
+
+    .intro-buttons {
+        flex-direction: column;
     }
 }

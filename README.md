@@ -6,15 +6,20 @@ So here we have it folks, last week of siege, one last project, really good time
 
 ## A list of thingies...
 
-- [ ] game-board
-    - [ ] centered
-    - [ ] 8x8, each box being 32x32px
-    - [ ] alternate checked pattern
-- [ ] game-pieces
-    - [ ] red and black
-    - [ ] queen piece has different vibe
-- [ ] intro-screen
-- [ ] moves
-    - [ ] Have legal moves
-    - [ ] Have `chess.com` style thing that shows where player can move
-    - [ ] Have a red outline circle for something that the player can capture
+- [x] game-board
+    - [x] centered
+    - [x] 8x8, each box being 32x32px
+    - [x] alternate checked pattern
+- [x] game-pieces
+    - [x] red and black
+    - [x] king piece has different vibe
+- [x] intro-screen
+    - [x] choice picking for user
+    - [x] determines what orientation the board is in
+- [x] moves
+    - [x] Have legal moves
+    - [x] Have `chess.com` style thing that shows where player can move
+    - [x] Have a red outline circle for something that the player can capture
+- [ ] an ai to play again
+    - [ ] variable difficulty?
+    - [ ] togglable

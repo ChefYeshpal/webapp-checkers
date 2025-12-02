@@ -6,6 +6,9 @@ const logDebug = (...args) => {
 };
 
 const gameBoard = document.getElementById('gameBoard');
+const gameContainer = document.querySelector('.game-container');
+const introOverlay = document.getElementById('introOverlay');
+const playerChoiceButtons = document.querySelectorAll('[data-player-choice]');
 const board = [];
 const boardState = CheckersRules.createEmptyBoard();
 
@@ -120,6 +123,61 @@ const highlightAvailableMoves = (legal) => {
             highlightedCapturePieces.add(capturedPiece);
         }
     });
+};
+
+const buildBoardGrid = () => {
+    if (board.length) return;
+    for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+            const square = document.createElement('div');
+            square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+            square.dataset.row = row;
+            square.dataset.col = col;
+            square.id = `square-${row}-${col}`;
+            gameBoard.appendChild(square);
+            board.push(square);
+        }
+    }
+};
+
+const clearBoardUI = () => {
+    board.forEach((square) => {
+        square.innerHTML = '';
+    });
+    clearSelection();
+};
+
+const resetBoardState = () => {
+    for (let row = 0; row < boardState.length; row++) {
+        boardState[row].fill(null);
+    }
+};
+
+/**
+ * This is what will determine where them pieces go
+ * whatever the player selected in the initial dialogue, those pieces will be in the bottom
+ * ofc there's some more code ahead that's also vital but you really think I'll add that?
+ */
+const seedStartingPieces = (bottomColor) => {
+    const topColor = bottomColor === 'black' ? 'red' : 'black';
+    board.forEach((square, index) => {
+        const row = Math.floor(index / 8);
+        const col = index % 8;
+        if ((row + col) % 2 === 0) return;
+        if (row <= 2) {
+            placePieceOnSquare(square, topColor);
+        } else if (row >= 5) {
+            placePieceOnSquare(square, bottomColor);
+        }
+    });
+};
+
+const initializeBoard = (bottomColor) => {
+    buildBoardGrid();
+    clearBoardUI();
+    resetBoardState();
+    seedStartingPieces(bottomColor);
+    logDebug('Board init', { bottomColor });
 };
 
 const setMoveLookup = (legal) => {
@@ -340,6 +398,25 @@ const handleBoardClick = (event) => {
         attemptMoveToSquare(square);
     }
 };
+
+const startGame = (playerColor) => {
+    initializeBoard(playerColor);
+    state.currentPlayer = playerColor;
+    state.draggedPiece = null;
+    state.activeChainPiece = null;
+    state.moveLookup = new Map();
+    logDebug('Game started', { playerColor });
+    gameContainer.classList.remove('game-hidden');
+    introOverlay.classList.add('is-hidden');
+};
+
+playerChoiceButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+        const choice = button.dataset.playerChoice;
+        if (!choice) return;
+        startGame(choice);
+    });
+});
 
 gameBoard.addEventListener('dragstart', handleDragStart);
 gameBoard.addEventListener('dragover', handleDragOver);
