@@ -25,10 +25,24 @@ body {
 }
 
 h1 {
-    font-size: clamp(2rem, 5vw, 3.5rem);
-    font-weight: 300;
-    letter-spacing: 0.1em;
+    font-size: clamp(2rem, 5vw, 3rem);
+    font-weight: 600;
+    letter-spacing: 0.25em;
     text-align: center;
+    text-transform: uppercase;
+    color: #f5f5f5;
+    position: relative;
+    padding-bottom: 0.5rem;
+}
+
+h1::after {
+    content: '';
+    display: block;
+    margin: 0.5rem auto 0;
+    width: clamp(80px, 28vw, 200px);
+    height: 2px;
+    background: rgba(245, 245, 245, 0.35);
+    border-radius: 999px;
 }
 
 .game-board {
