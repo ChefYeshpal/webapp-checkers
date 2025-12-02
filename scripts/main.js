@@ -1,4 +1,10 @@
 // 8x8 pattern setup
+const DEBUG = true;
+const logDebug = (...args) => {
+    if (!DEBUG) return;
+    console.debug('[Checkers]', ...args);
+};
+
 const gameBoard = document.getElementById('gameBoard');
 const board = [];
 const boardState = CheckersRules.createEmptyBoard();
@@ -56,6 +62,7 @@ const placePieceOnSquare = (square, color, isKing = false) => {
     CheckersRules.placePiece(boardState, row, col, color, isKing);
     const piece = createPiece(color, isKing);
     square.appendChild(piece);
+    logDebug('Placed piece', { color, isKing, row, col });
     return piece;
 };
 
@@ -86,6 +93,10 @@ const clearHighlights = () => {
 
 const highlightAvailableMoves = (legal) => {
     clearHighlights();
+    logDebug('Highlighting options', {
+        moves: legal.moves.length,
+        captures: legal.captures.length
+    });
     const highlightSquare = (row, col) => {
         const target = getSquareElement(row, col);
         if (target && !highlightedSquares.has(target)) {
@@ -128,13 +139,25 @@ const applyAvailableMoves = (legal) => {
 
 const canInteractWithPiece = (piece) => {
     const square = piece.parentElement;
-    if (!square) return false;
+    if (!square) {
+        logDebug('Piece has no square, interaction blocked');
+        return false;
+    }
     const row = Number(square.dataset.row);
     const col = Number(square.dataset.col);
     const data = CheckersRules.getPiece(boardState, row, col);
-    if (!data) return false;
-    if (data.color !== state.currentPlayer) return false;
-    if (state.activeChainPiece && state.activeChainPiece !== piece) return false;
+    if (!data) {
+        logDebug('No board data for square, interaction blocked', { row, col });
+        return false;
+    }
+    if (data.color !== state.currentPlayer) {
+        logDebug('Blocked interaction with opponent piece', { requested: data.color, currentPlayer: state.currentPlayer });
+        return false;
+    }
+    if (state.activeChainPiece && state.activeChainPiece !== piece) {
+        logDebug('Must continue chain with the same piece');
+        return false;
+    }
     return true;
 };
 
@@ -153,10 +176,19 @@ const handlePieceSelection = (piece) => {
 
     const hasOptions = filtered.moves.length > 0 || filtered.captures.length > 0;
     if ((mustCapture && filtered.captures.length === 0) || !hasOptions) {
+        logDebug('Selection blocked: no legal moves', { row, col, mustCapture });
         return false;
     }
 
     selectPiece(piece);
+    logDebug('Piece selected', {
+        color: piece.dataset.color,
+        row,
+        col,
+        mustCapture,
+        moveOptions: filtered.moves.length,
+        captureOptions: filtered.captures.length
+    });
     applyAvailableMoves(filtered);
     return true;
 };
@@ -168,7 +200,11 @@ const attemptMoveToSquare = (square) => {
     const row = Number(square.dataset.row);
     const col = Number(square.dataset.col);
     const move = getMoveForDestination(row, col);
-    if (!move) return;
+    if (!move) {
+        logDebug('No legal move found for destination', { row, col });
+        return;
+    }
+    logDebug('Attempting move', { from: move.from, to: move.to, type: move.type });
     executeMove(move);
 };
 
@@ -181,17 +217,27 @@ const executeMove = (move) => {
 
     const result = CheckersRules.applyMove(boardState, move);
     targetSquare.appendChild(piece);
+    logDebug('Move applied', {
+        type: move.type,
+        from: move.from,
+        to: move.to,
+        captured: move.captured || null
+    });
 
     if (move.type === 'capture' && move.captured) {
         const capturedSquare = getSquareElement(move.captured.row, move.captured.col);
         const capturedPiece = capturedSquare ? capturedSquare.querySelector('.piece') : null;
         if (capturedPiece) {
             capturedPiece.remove();
+            logDebug('Piece captured', move.captured);
         }
     }
 
     if (result.piece) {
         updatePieceVisuals(piece, result.piece.isKing);
+        if (result.becameKing) {
+            logDebug('Piece promoted to king', move.to);
+        }
     }
 
     clearHighlights();
@@ -203,6 +249,7 @@ const executeMove = (move) => {
             state.activeChainPiece = piece;
             selectPiece(piece);
             applyAvailableMoves({ moves: [], captures: followUp.captures });
+            logDebug('Continuing capture chain', { from: move.to, options: followUp.captures.length });
             return;
         }
     }
@@ -210,6 +257,7 @@ const executeMove = (move) => {
     state.activeChainPiece = null;
     clearSelection();
     state.currentPlayer = state.currentPlayer === 'black' ? 'red' : 'black';
+    logDebug('Turn switched', { currentPlayer: state.currentPlayer });
 };
 
 for (let row = 0; row < 8; row++) {
@@ -234,6 +282,7 @@ board.forEach((square, index) => {
         placePieceOnSquare(square, 'red');
     }
 });
+logDebug('Board init');
 
 const handleDragStart = (event) => {
     const piece = event.target.closest('.piece');
