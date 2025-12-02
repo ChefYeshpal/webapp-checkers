@@ -79,15 +79,24 @@ h1::after {
     position: relative;
 }
 
-.square.force-move::before {
+.square.force-move::before,
+.square.force-move::after {
     content: '';
     position: absolute;
     width: 80%;
     height: 80%;
-    border: 2px dashed rgba(255, 255, 255, 0.45);
     border-radius: 18px;
-    animation: forceOrbit 1s ease-in-out infinite;
     pointer-events: none;
+}
+
+.square.force-move::before {
+    border: 2px dashed rgba(255, 255, 255, 0.45);
+    animation: forceOrbit 1s ease-in-out infinite;
+}
+
+.square.force-move::after {
+    border: 2px solid rgba(255, 255, 255, 0.15);
+    animation: forceOrbitReverse 1.2s linear infinite;
 }
 
 .square.highlight-move::after {
@@ -405,6 +414,21 @@ h1::after {
     100% {
         transform: rotate(360deg) scale(0.9);
         opacity: 0.5;
+    }
+}
+
+@keyframes forceOrbitReverse {
+    0% {
+        transform: rotate(0deg) scale(1.05);
+        opacity: 0.35;
+    }
+    50% {
+        transform: rotate(-180deg) scale(0.85);
+        opacity: 0.8;
+    }
+    100% {
+        transform: rotate(-360deg) scale(1.05);
+        opacity: 0.35;
     }
 }
 
