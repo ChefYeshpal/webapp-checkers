@@ -29,6 +29,7 @@ const state = {
 const highlightedSquares = new Set();
 const highlightedCapturePieces = new Set();
 const forcedMoveSquares = new Set();
+const lastMoveSquares = new Set();
 
 const getSquareElement = (row, col) => document.getElementById(`square-${row}-${col}`);
 
@@ -105,6 +106,25 @@ const clearHighlights = () => {
 const clearForcedMoveHighlights = () => {
     forcedMoveSquares.forEach((square) => square.classList.remove('force-move'));
     forcedMoveSquares.clear();
+};
+
+const clearLastMoveHighlights = () => {
+    lastMoveSquares.forEach((square) => {
+        square.classList.remove('last-move-from', 'last-move-to');
+    });
+    lastMoveSquares.clear();
+};
+
+const setLastMoveHighlights = (fromSquare, toSquare) => {
+    clearLastMoveHighlights();
+    if (fromSquare) {
+        fromSquare.classList.add('last-move-from');
+        lastMoveSquares.add(fromSquare);
+    }
+    if (toSquare) {
+        toSquare.classList.add('last-move-to');
+        lastMoveSquares.add(toSquare);
+    }
 };
 
 const addForcedHighlight = (square) => {
@@ -266,6 +286,7 @@ const clearBoardUI = () => {
     });
     clearSelection();
     clearForcedMoveHighlights();
+    clearLastMoveHighlights();
 };
 
 const resetBoardState = () => {
@@ -399,6 +420,7 @@ const executeMove = (move) => {
 
     const targetSquare = getSquareElement(move.to.row, move.to.col);
     if (!targetSquare) return;
+    const fromSquare = getSquareElement(move.from.row, move.from.col);
 
     const result = CheckersRules.applyMove(boardState, move);
     targetSquare.appendChild(piece);
@@ -408,6 +430,8 @@ const executeMove = (move) => {
         to: move.to,
         captured: move.captured || null
     });
+
+    setLastMoveHighlights(fromSquare, targetSquare);
 
     if (move.type === 'capture' && move.captured) {
         const capturedSquare = getSquareElement(move.captured.row, move.captured.col);
