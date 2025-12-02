@@ -28,6 +28,7 @@ const state = {
 
 const highlightedSquares = new Set();
 const highlightedCapturePieces = new Set();
+const forcedMoveSquares = new Set();
 
 const getSquareElement = (row, col) => document.getElementById(`square-${row}-${col}`);
 
@@ -98,6 +99,32 @@ const clearHighlights = () => {
     highlightedSquares.clear();
     highlightedCapturePieces.forEach((piece) => piece.classList.remove('highlight-capture'));
     highlightedCapturePieces.clear();
+};
+
+const clearForcedMoveHighlights = () => {
+    forcedMoveSquares.forEach((square) => square.classList.remove('force-move'));
+    forcedMoveSquares.clear();
+};
+
+const addForcedHighlight = (square) => {
+    if (!square || forcedMoveSquares.has(square)) return;
+    square.classList.add('force-move');
+    forcedMoveSquares.add(square);
+};
+
+const updateForcedMoveHighlights = () => {
+    clearForcedMoveHighlights();
+    if (state.gameOver || !state.currentPlayer) return;
+    if (state.activeChainPiece) {
+        const square = state.activeChainPiece.parentElement;
+        if (square) addForcedHighlight(square);
+        return;
+    }
+    const forced = CheckersRules.getForcedMovesForPlayer(boardState, state.currentPlayer);
+    forced.forEach(({ row, col }) => {
+        const square = getSquareElement(row, col);
+        if (square) addForcedHighlight(square);
+    });
 };
 
 const showResultOverlay = ({ title, copy, secondary, buttonText }) => {
@@ -235,6 +262,7 @@ const clearBoardUI = () => {
         square.innerHTML = '';
     });
     clearSelection();
+    clearForcedMoveHighlights();
 };
 
 const resetBoardState = () => {
@@ -268,6 +296,7 @@ const initializeBoard = (bottomColor) => {
     resetBoardState();
     seedStartingPieces(bottomColor);
     logDebug('Board init', { bottomColor });
+    updateForcedMoveHighlights();
 };
 
 const setMoveLookup = (legal) => {

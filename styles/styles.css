@@ -79,6 +79,17 @@ h1::after {
     position: relative;
 }
 
+.square.force-move::before {
+    content: '';
+    position: absolute;
+    width: 80%;
+    height: 80%;
+    border: 2px dashed rgba(255, 255, 255, 0.45);
+    border-radius: 18px;
+    animation: forceOrbit 1s ease-in-out infinite;
+    pointer-events: none;
+}
+
 .square.highlight-move::after {
     content: '';
     position: absolute;
@@ -379,6 +390,21 @@ h1::after {
     }
     100% {
         transform: rotate(360deg) scale(0.95);
+    }
+}
+
+@keyframes forceOrbit {
+    0% {
+        transform: rotate(0deg) scale(0.9);
+        opacity: 0.5;
+    }
+    50% {
+        transform: rotate(180deg) scale(1.05);
+        opacity: 1;
+    }
+    100% {
+        transform: rotate(360deg) scale(0.9);
+        opacity: 0.5;
     }
 }
 
