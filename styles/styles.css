@@ -14,6 +14,10 @@ body {
     min-height: 100vh;
 }
 
+body.result-active .game-container {
+    filter: blur(4px);
+}
+
 .container {
     display: flex;
     flex-direction: column;
@@ -159,6 +163,80 @@ h1::after {
     transform: translate(-50%, -50%);
     box-shadow: 0 0 8px rgba(231, 76, 60, 0.75);
     pointer-events: none;
+}
+
+.result-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 5, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1000;
+    transition: opacity 0.35s ease;
+}
+
+.result-overlay.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.result-dialog {
+    width: min(420px, 90vw);
+    background: #161616;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 22px;
+    padding: 2rem;
+    box-shadow: 0 25px 90px rgba(0, 0, 0, 0.65);
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+}
+
+.result-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.4em;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.result-dialog h2 {
+    font-size: clamp(1.9rem, 6vw, 2.7rem);
+    font-weight: 700;
+}
+
+.result-copy,
+.result-secondary {
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.6;
+}
+
+.result-secondary {
+    letter-spacing: 0.25em;
+    font-size: 0.85rem;
+}
+
+.result-button {
+    margin-top: 0.5rem;
+    border: none;
+    background: #f5f5f5;
+    color: #0f0f0f;
+    padding: 0.85rem 1.5rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.result-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 /* I find myself to be rather proud of this */
@@ -315,5 +393,8 @@ h1::after {
 
     .intro-buttons {
         flex-direction: column;
+    }
+    .result-dialog {
+        padding: 1.5rem;
     }
 }

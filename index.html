@@ -32,6 +32,15 @@
         <h1>Lonely Checkers :')</h1>
         <div class="game-board" id="gameBoard"></div>
     </div>
+    <div class="result-overlay is-hidden" id="resultOverlay">
+        <div class="result-dialog">
+            <p class="result-eyebrow" id="resultEyebrow">Game Over</p>
+            <h2 id="resultTitle">We have a winner</h2>
+            <p class="result-copy" id="resultCopy">It seems like someone dominated this board.</p>
+            <p class="result-secondary" id="resultSecondary">You wanna play again?</p>
+            <button type="button" class="result-button" id="resultAction">Play again</button>
+        </div>
+    </div>
     <script src="scripts/legalmoves.js"></script>
     <script src="scripts/main.js"></script>
     </body>

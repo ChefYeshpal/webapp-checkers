@@ -1,14 +1,20 @@
 const CheckersRules = (() => {
 	const SIZE = 8;
-	const DIRECTIONS = {
-		red: [
+	const BASE_DIRECTIONS = {
+		up: [
 			[-1, -1],
 			[-1, 1]
 		],
-		black: [
+		down: [
 			[1, -1],
 			[1, 1]
 		]
+	};
+	let bottomColor = 'red';
+	let topColor = 'black';
+	const directionMap = {
+		red: BASE_DIRECTIONS.up,
+		black: BASE_DIRECTIONS.down
 	};
 	const KING_DIRECTIONS = [
 		[-1, -1],
@@ -35,7 +41,17 @@ const CheckersRules = (() => {
 		return state[row][col];
 	};
 
-	const getDirectionsForPiece = (piece) => (piece.isKing ? KING_DIRECTIONS : DIRECTIONS[piece.color]);
+	const getDirectionsForPiece = (piece) => {
+		if (piece.isKing) return KING_DIRECTIONS;
+		return directionMap[piece.color] || BASE_DIRECTIONS.up;
+	};
+
+	const setBottomColor = (color) => {
+		bottomColor = color === 'black' ? 'black' : 'red';
+		topColor = bottomColor === 'black' ? 'red' : 'black';
+		directionMap[bottomColor] = BASE_DIRECTIONS.up;
+		directionMap[topColor] = BASE_DIRECTIONS.down;
+	};
 
 	const computePieceMoves = (state, row, col) => {
 		const piece = getPiece(state, row, col);
@@ -110,9 +126,9 @@ const CheckersRules = (() => {
 
 		let becameKing = false;
 		if (!piece.isKing) {
-			const reachedRedEnd = piece.color === 'red' && move.to.row === 0;
-			const reachedBlackEnd = piece.color === 'black' && move.to.row === SIZE - 1;
-			if (reachedRedEnd || reachedBlackEnd) {
+			const reachedTop = piece.color === bottomColor && move.to.row === 0;
+			const reachedBottom = piece.color === topColor && move.to.row === SIZE - 1;
+			if (reachedTop || reachedBottom) {
 				piece.isKing = true;
 				becameKing = true;
 			}
@@ -151,6 +167,7 @@ const CheckersRules = (() => {
 		getLegalMovesForPiece,
 		playerHasCapture,
 		getForcedMovesForPlayer,
-		applyMove
+		applyMove,
+		setBottomColor
 	};
 })();

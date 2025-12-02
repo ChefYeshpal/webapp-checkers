@@ -9,15 +9,21 @@ const gameBoard = document.getElementById('gameBoard');
 const gameContainer = document.querySelector('.game-container');
 const introOverlay = document.getElementById('introOverlay');
 const playerChoiceButtons = document.querySelectorAll('[data-player-choice]');
+const resultOverlay = document.getElementById('resultOverlay');
+const resultTitle = document.getElementById('resultTitle');
+const resultCopy = document.getElementById('resultCopy');
+const resultSecondary = document.getElementById('resultSecondary');
+const resultAction = document.getElementById('resultAction');
 const board = [];
 const boardState = CheckersRules.createEmptyBoard();
 
 const state = {
     draggedPiece: null,
     selectedPiece: null,
-    currentPlayer: 'black',
+    currentPlayer: null,
     moveLookup: new Map(),
-    activeChainPiece: null
+    activeChainPiece: null,
+    gameOver: true
 };
 
 const highlightedSquares = new Set();
@@ -92,6 +98,90 @@ const clearHighlights = () => {
     highlightedSquares.clear();
     highlightedCapturePieces.forEach((piece) => piece.classList.remove('highlight-capture'));
     highlightedCapturePieces.clear();
+};
+
+const showResultOverlay = ({ title, copy, secondary, buttonText }) => {
+    resultTitle.textContent = title;
+    resultCopy.textContent = copy;
+    resultSecondary.textContent = secondary;
+    resultAction.textContent = buttonText;
+    resultOverlay.classList.remove('is-hidden');
+    document.body.classList.add('result-active');
+};
+
+const hideResultOverlay = () => {
+    resultOverlay.classList.add('is-hidden');
+    document.body.classList.remove('result-active');
+};
+
+const getPlayerStats = (player) => {
+    let hasPieces = false;
+    let hasMoves = false;
+    for (let row = 0; row < boardState.length; row++) {
+        for (let col = 0; col < boardState[row].length; col++) {
+            const piece = CheckersRules.getPiece(boardState, row, col);
+            if (!piece || piece.color !== player) continue;
+            hasPieces = true;
+            if (!hasMoves) {
+                const { moves, captures } = CheckersRules.computePieceMoves(boardState, row, col);
+                if (moves.length || captures.length) {
+                    hasMoves = true;
+                }
+            }
+            if (hasPieces && hasMoves) {
+                return { hasPieces, hasMoves };
+            }
+        }
+    }
+    return { hasPieces, hasMoves };
+};
+
+const evaluateGameState = () => {
+    const black = getPlayerStats('black');
+    const red = getPlayerStats('red');
+
+    if (!black.hasPieces || (!black.hasMoves && red.hasMoves)) {
+        return { status: 'win', winner: 'red' };
+    }
+    if (!red.hasPieces || (!red.hasMoves && black.hasMoves)) {
+        return { status: 'win', winner: 'black' };
+    }
+    if (!black.hasMoves && !red.hasMoves) {
+        return { status: 'draw' };
+    }
+    return { status: 'ongoing' };
+};
+
+const endGame = (result) => {
+    state.gameOver = true;
+    if (result.status === 'win' && result.winner) {
+        const winnerUpper = result.winner.toUpperCase();
+        showResultOverlay({
+            title: `${winnerUpper} WON!`,
+            copy: `It seems like ${result.winner} won because of how pathetically the opponent played lol`,
+            secondary: 'you wanna play again?',
+            buttonText: 'Play again'
+        });
+    } else {
+        showResultOverlay({
+            title: 'WE HAVE A DRAW',
+            copy: 'wow both players are so bad at this game, that it resulted in a draw???',
+            secondary: 'anyways, wanna play again?',
+            buttonText: 'Yes please'
+        });
+    }
+    logDebug('Game ended', result);
+};
+
+const handleResultAction = () => {
+    hideResultOverlay();
+    introOverlay.classList.remove('is-hidden');
+    gameContainer.classList.add('game-hidden');
+    clearBoardUI();
+    resetBoardState();
+    state.currentPlayer = null;
+    state.draggedPiece = null;
+    state.activeChainPiece = null;
 };
 
 const highlightAvailableMoves = (legal) => {
@@ -196,6 +286,10 @@ const applyAvailableMoves = (legal) => {
 };
 
 const canInteractWithPiece = (piece) => {
+    if (state.gameOver) {
+        logDebug('Interaction blocked: game over');
+        return false;
+    }
     const square = piece.parentElement;
     if (!square) {
         logDebug('Piece has no square, interaction blocked');
@@ -254,6 +348,7 @@ const handlePieceSelection = (piece) => {
 const getMoveForDestination = (row, col) => state.moveLookup.get(`${row}-${col}`);
 
 const attemptMoveToSquare = (square) => {
+    if (state.gameOver) return;
     if (!state.selectedPiece || !square) return;
     const row = Number(square.dataset.row);
     const col = Number(square.dataset.col);
@@ -316,6 +411,10 @@ const executeMove = (move) => {
     clearSelection();
     state.currentPlayer = state.currentPlayer === 'black' ? 'red' : 'black';
     logDebug('Turn switched', { currentPlayer: state.currentPlayer });
+    const gameStatus = evaluateGameState();
+    if (gameStatus.status !== 'ongoing') {
+        endGame(gameStatus);
+    }
 };
 
 for (let row = 0; row < 8; row++) {
@@ -343,6 +442,10 @@ board.forEach((square, index) => {
 logDebug('Board init');
 
 const handleDragStart = (event) => {
+    if (state.gameOver) {
+        event.preventDefault();
+        return;
+    }
     const piece = event.target.closest('.piece');
     if (!piece) return;
     const selectionSucceeded = handlePieceSelection(piece);
@@ -358,6 +461,7 @@ const handleDragStart = (event) => {
 };
 
 const handleDragOver = (event) => {
+    if (state.gameOver) return;
     const square = event.target.closest('.square');
     if (!square || !state.draggedPiece || state.selectedPiece !== state.draggedPiece) return;
     const row = Number(square.dataset.row);
@@ -371,6 +475,7 @@ const handleDragOver = (event) => {
 };
 
 const handleDrop = (event) => {
+    if (state.gameOver) return;
     event.preventDefault();
     const square = event.target.closest('.square');
     if (!square || !state.draggedPiece) return;
@@ -383,6 +488,7 @@ const handleDragEnd = () => {
 };
 
 const handleBoardClick = (event) => {
+    if (state.gameOver) return;
     const piece = event.target.closest('.piece');
     if (piece) {
         if (state.selectedPiece === piece && !state.activeChainPiece) {
@@ -400,15 +506,20 @@ const handleBoardClick = (event) => {
 };
 
 const startGame = (playerColor) => {
+    hideResultOverlay();
+    CheckersRules.setBottomColor(playerColor);
     initializeBoard(playerColor);
     state.currentPlayer = playerColor;
     state.draggedPiece = null;
     state.activeChainPiece = null;
     state.moveLookup = new Map();
+    state.gameOver = false;
     logDebug('Game started', { playerColor });
     gameContainer.classList.remove('game-hidden');
     introOverlay.classList.add('is-hidden');
 };
+// You would be surprised with the things I can break
+resultAction.addEventListener('click', handleResultAction);
 
 playerChoiceButtons.forEach((button) => {
     button.addEventListener('click', () => {
