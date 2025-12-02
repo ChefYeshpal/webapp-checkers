@@ -101,6 +101,7 @@ const clearHighlights = () => {
     highlightedCapturePieces.clear();
 };
 
+// brr go round round
 const clearForcedMoveHighlights = () => {
     forcedMoveSquares.forEach((square) => square.classList.remove('force-move'));
     forcedMoveSquares.clear();
@@ -209,6 +210,8 @@ const handleResultAction = () => {
     state.currentPlayer = null;
     state.draggedPiece = null;
     state.activeChainPiece = null;
+    //state.moveLookup = new Map();
+    clearForcedMoveHighlights();
 };
 
 const highlightAvailableMoves = (legal) => {
@@ -432,6 +435,7 @@ const executeMove = (move) => {
             selectPiece(piece);
             applyAvailableMoves({ moves: [], captures: followUp.captures });
             logDebug('Continuing capture chain', { from: move.to, options: followUp.captures.length });
+            updateForcedMoveHighlights();
             return;
         }
     }
@@ -440,6 +444,7 @@ const executeMove = (move) => {
     clearSelection();
     state.currentPlayer = state.currentPlayer === 'black' ? 'red' : 'black';
     logDebug('Turn switched', { currentPlayer: state.currentPlayer });
+    updateForcedMoveHighlights();
     const gameStatus = evaluateGameState();
     if (gameStatus.status !== 'ongoing') {
         endGame(gameStatus);
@@ -543,11 +548,12 @@ const startGame = (playerColor) => {
     state.activeChainPiece = null;
     state.moveLookup = new Map();
     state.gameOver = false;
+    updateForcedMoveHighlights();
     logDebug('Game started', { playerColor });
     gameContainer.classList.remove('game-hidden');
     introOverlay.classList.add('is-hidden');
 };
-// You would be surprised with the things I can break
+
 resultAction.addEventListener('click', handleResultAction);
 
 playerChoiceButtons.forEach((button) => {
