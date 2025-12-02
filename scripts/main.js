@@ -50,6 +50,7 @@ const clearSelection = () => {
     }
     state.selectedPiece = null;
     state.moveLookup = new Map();
+    state.activeChainPiece = null;
     clearHighlights();
 };
 
@@ -76,6 +77,7 @@ const highlightAvailableMoves = (legal) => {
 
     legal.captures.forEach((move) => {
         highlightSquare(move.to.row, move.to.col);
+        if (!move.captured) return;
         const capturedSquare = getSquareElement(move.captured.row, move.captured.col);
         if (!capturedSquare) return;
         const capturedPiece = capturedSquare.querySelector('.piece');
