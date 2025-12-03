@@ -467,11 +467,7 @@ const resetBoardState = () => {
     }
 };
 
-/**
- * This is what will determine where them pieces go
- * whatever the player selected in the initial dialogue, those pieces will be in the bottom
- * ofc there's some more code ahead that's also vital but you really think I'll add that?
- */
+
 const seedStartingPieces = (bottomColor) => {
     const topColor = bottomColor === 'black' ? 'red' : 'black';
     board.forEach((square, index) => {
