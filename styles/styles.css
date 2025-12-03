@@ -17,8 +17,8 @@ body {
 .notification {
     position: fixed;
     top: 1.5rem;
-    left: 50%;
-    transform: translate(-50%, -120%);
+    right: 1.5rem;
+    transform: translateY(-120%);
     background: rgba(231, 76, 60, 0.95);
     color: #fff;
     padding: 0.65rem 1.2rem;
@@ -35,7 +35,7 @@ body {
 }
 
 .notification.is-visible {
-    transform: translate(-50%, 0);
+    transform: translateY(0);
     opacity: 1;
 }
 
