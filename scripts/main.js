@@ -14,6 +14,7 @@ const resultTitle = document.getElementById('resultTitle');
 const resultCopy = document.getElementById('resultCopy');
 const resultSecondary = document.getElementById('resultSecondary');
 const resultAction = document.getElementById('resultAction');
+const notificationElement = document.getElementById('moveNotification');
 const board = [];
 const boardState = CheckersRules.createEmptyBoard();
 
@@ -24,8 +25,11 @@ const state = {
     moveLookup: new Map(),
     activeChainPiece: null,
     gameOver: true,
-    lastMoveSquares: { from: null, to: null }
+    lastMoveSquares: { from: null, to: null },
+    notificationTimeout: null
 };
+
+const FORCE_MOVE_MESSAGE = 'Move is not allowed';
 
 const highlightedSquares = new Set();
 const highlightedCapturePieces = new Set();
@@ -38,6 +42,23 @@ const getPieceAssetPath = (color, isKing) => {
         return isKing ? 'assets/blackpiece_king.png' : 'assets/blackpiece.png';
     }
     return isKing ? 'assets/redpiece_king.png' : 'assets/redpiece.png';
+};
+
+const hideNotification = () => {
+    if (!notificationElement) return;
+    notificationElement.classList.remove('is-visible');
+    if (state.notificationTimeout) {
+        clearTimeout(state.notificationTimeout);
+        state.notificationTimeout = null;
+    }
+};
+
+const showNotification = (message) => {
+    if (!notificationElement) return;
+    hideNotification();
+    notificationElement.textContent = message;
+    notificationElement.classList.add('is-visible');
+    state.notificationTimeout = setTimeout(hideNotification, 2200);
 };
 
 // Piecec moves
@@ -285,6 +306,7 @@ const endGame = (result) => {
 
 const handleResultAction = () => {
     hideResultOverlay();
+    hideNotification();
     introOverlay.classList.remove('is-hidden');
     gameContainer.classList.add('game-hidden');
     clearBoardUI();
@@ -423,6 +445,7 @@ const canInteractWithPiece = (piece) => {
     }
     if (state.activeChainPiece && state.activeChainPiece !== piece) {
         logDebug('Must continue chain with the same piece');
+        showNotification(FORCE_MOVE_MESSAGE);
         return false;
     }
     return true;
@@ -442,6 +465,9 @@ const handlePieceSelection = (piece) => {
         : legal;
 
     const hasOptions = filtered.moves.length > 0 || filtered.captures.length > 0;
+    if (mustCapture && filtered.captures.length === 0) {
+        showNotification(FORCE_MOVE_MESSAGE);
+    }
     if ((mustCapture && filtered.captures.length === 0) || !hasOptions) {
         logDebug('Selection blocked: no legal moves', { row, col, mustCapture });
         return false;
@@ -470,6 +496,10 @@ const attemptMoveToSquare = (square) => {
     const move = getMoveForDestination(row, col);
     if (!move) {
         logDebug('No legal move found for destination', { row, col });
+        const forcedCaptureInEffect = Boolean(state.activeChainPiece) || (state.currentPlayer && CheckersRules.playerHasCapture(boardState, state.currentPlayer));
+        if (forcedCaptureInEffect) {
+            showNotification(FORCE_MOVE_MESSAGE);
+        }
         return;
     }
     logDebug('Attempting move', { from: move.from, to: move.to, type: move.type });
@@ -627,6 +657,7 @@ const handleBoardClick = (event) => {
 
 const startGame = (playerColor) => {
     hideResultOverlay();
+    hideNotification();
     CheckersRules.setBottomColor(playerColor);
     initializeBoard(playerColor);
     state.currentPlayer = playerColor;

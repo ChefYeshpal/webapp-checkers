@@ -14,6 +14,31 @@ body {
     min-height: 100vh;
 }
 
+.notification {
+    position: fixed;
+    top: 1.5rem;
+    left: 50%;
+    transform: translate(-50%, -120%);
+    background: rgba(231, 76, 60, 0.95);
+    color: #fff;
+    padding: 0.65rem 1.2rem;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 1100;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.notification.is-visible {
+    transform: translate(-50%, 0);
+    opacity: 1;
+}
+
 body.result-active .game-container {
     filter: blur(4px);
 }
