@@ -196,6 +196,7 @@ h1::after {
     height: 70%;
     object-fit: cover;
     border-radius: 50%;
+    image-rendering: pixelated;
 }
 
 .piece {
@@ -223,6 +224,7 @@ h1::after {
     height: 100%;
     object-fit: contain;
     pointer-events: none;
+    image-rendering: pixelated;
 }
 
 
