@@ -109,6 +109,24 @@ const CheckersRules = (() => {
 		return false;
 	};
 
+	const getAllLegalMovesForPlayer = (state, player) => {
+		const aggregated = { moves: [], captures: [] };
+		for (let row = 0; row < SIZE; row++) {
+			for (let col = 0; col < SIZE; col++) {
+				const piece = getPiece(state, row, col);
+				if (!piece || piece.color !== player) continue;
+				const legal = computePieceMoves(state, row, col);
+				if (legal.moves.length) {
+					aggregated.moves.push(...legal.moves);
+				}
+				if (legal.captures.length) {
+					aggregated.captures.push(...legal.captures);
+				}
+			}
+		}
+		return aggregated;
+	};
+
 	const getLegalMovesForPiece = (state, row, col, player) => {
 		const piece = getPiece(state, row, col);
 		if (!piece || piece.color !== player) return { moves: [], captures: [] };
@@ -168,6 +186,7 @@ const CheckersRules = (() => {
 		playerHasCapture,
 		getForcedMovesForPlayer,
 		applyMove,
-		setBottomColor
+		setBottomColor,
+		getAllLegalMovesForPlayer
 	};
 })();
