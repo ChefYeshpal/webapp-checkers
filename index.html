@@ -20,12 +20,28 @@
                 <li>Captures are mandatory when available.</li>
                 <li>Reach the far side to crown a king and unlock backward moves.</li>
             </ul>
+            <div class="intro-choice" role="group" aria-label="Opponent type">
+                <span>Opponent?</span>
+                <div class="intro-buttons intro-buttons--compact">
+                    <button type="button" class="intro-button" data-opponent-choice="ai" aria-pressed="false">AI</button>
+                    <button type="button" class="intro-button" data-opponent-choice="human" aria-pressed="false">Friend</button>
+                </div>
+            </div>
             <div class="intro-choice">
                 <span>Play as?</span>
                 <div class="intro-buttons">
                     <button type="button" class="intro-button" data-player-choice="black">Black</button>
                     <button type="button" class="intro-button" data-player-choice="red">Red</button>
                 </div>
+            </div>
+        </div>
+    </div>
+    <div class="friend-overlay is-hidden" id="friendPromptOverlay">
+        <div class="friend-dialog">
+            <p class="friend-copy">you really have a friend you're playing with or are you alone? lol</p>
+            <div class="friend-buttons">
+                <button type="button" class="friend-button" data-friend-response="friends">I HAVE FRIENDS!</button>
+                <button type="button" class="friend-button" data-friend-response="alone">I'm alone...</button>
             </div>
         </div>
     </div>
@@ -43,6 +59,7 @@
         </div>
     </div>
     <script src="scripts/legalmoves.js"></script>
+    <script src="scripts/ai.js"></script>
     <script src="scripts/main.js"></script>
     </body>
 </html>

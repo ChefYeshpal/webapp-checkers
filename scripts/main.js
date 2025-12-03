@@ -9,6 +9,9 @@ const gameBoard = document.getElementById('gameBoard');
 const gameContainer = document.querySelector('.game-container');
 const introOverlay = document.getElementById('introOverlay');
 const playerChoiceButtons = document.querySelectorAll('[data-player-choice]');
+const opponentChoiceButtons = document.querySelectorAll('[data-opponent-choice]');
+const friendPromptOverlay = document.getElementById('friendPromptOverlay');
+const friendPromptButtons = document.querySelectorAll('[data-friend-response]');
 const resultOverlay = document.getElementById('resultOverlay');
 const resultTitle = document.getElementById('resultTitle');
 const resultCopy = document.getElementById('resultCopy');
@@ -26,10 +29,18 @@ const state = {
     activeChainPiece: null,
     gameOver: true,
     lastMoveSquares: { from: null, to: null },
-    notificationTimeout: null
+    notificationTimeout: null,
+    opponentType: 'ai',
+    humanColor: null,
+    aiColor: null,
+    bottomColor: null,
+    aiMoveTimeout: null,
+    pendingPlayerColor: null
 };
 
 const FORCE_MOVE_MESSAGE = 'Move is not allowed';
+const AI_TURN_MESSAGE = 'Let the AI finish its turn';
+const FRIEND_LINK_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
 
 const highlightedSquares = new Set();
 const highlightedCapturePieces = new Set();
@@ -59,6 +70,52 @@ const showNotification = (message) => {
     notificationElement.textContent = message;
     notificationElement.classList.add('is-visible');
     state.notificationTimeout = setTimeout(hideNotification, 2200);
+};
+
+const hideFriendPrompt = () => {
+    if (!friendPromptOverlay) return;
+    friendPromptOverlay.classList.add('is-hidden');
+};
+
+const returnToIntroFromFriendPrompt = () => {
+    if (!friendPromptOverlay || friendPromptOverlay.classList.contains('is-hidden')) {
+        return;
+    }
+    hideFriendPrompt();
+    state.pendingPlayerColor = null;
+    if (introOverlay) {
+        introOverlay.classList.remove('is-hidden');
+    }
+};
+
+const showFriendPrompt = (playerColor) => {
+    state.pendingPlayerColor = playerColor;
+    if (!friendPromptOverlay || !friendPromptButtons.length) {
+        startGame(playerColor);
+        return;
+    }
+    if (introOverlay) {
+        introOverlay.classList.add('is-hidden');
+    }
+    friendPromptOverlay.classList.remove('is-hidden');
+};
+
+const setOpponentType = (choice) => {
+    state.opponentType = choice === 'human' ? 'human' : 'ai';
+    returnToIntroFromFriendPrompt();
+    if (state.opponentType !== 'ai') {
+        CheckersAI.clearThinkingTimeout();
+        state.aiColor = null;
+    } else if (state.humanColor) {
+        state.aiColor = state.humanColor === 'black' ? 'red' : 'black';
+        CheckersAI.queueMoveIfNeeded();
+    }
+    opponentChoiceButtons.forEach((button) => {
+        const isActive = button.dataset.opponentChoice === state.opponentType;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+    logDebug('Opponent set', { opponentType: state.opponentType });
 };
 
 // Piecec moves
@@ -285,14 +342,39 @@ const evaluateGameState = () => {
 
 const endGame = (result) => {
     state.gameOver = true;
+    CheckersAI.clearThinkingTimeout();
     if (result.status === 'win' && result.winner) {
-        const winnerUpper = result.winner.toUpperCase();
-        showResultOverlay({
-            title: `${winnerUpper} WON!`,
-            copy: `It seems like ${result.winner} won because of how pathetically the opponent played lol`,
-            secondary: 'you wanna play again?',
-            buttonText: 'Play again'
-        });
+        let overlayContent = null;
+
+        if (state.opponentType === 'ai' && state.humanColor && state.aiColor) {
+            if (result.winner === state.aiColor) {
+                overlayContent = {
+                    title: "clanker won :'(",
+                    copy: 'you have failed me...',
+                    secondary: 'dont dissapoint me next time...',
+                    buttonText: 'im sorry...'
+                };
+            } else if (result.winner === state.humanColor) {
+                overlayContent = {
+                    title: 'YOU WON!!!',
+                    copy: 'BEAT THEM UPPP YEAHHHHHHH',
+                    secondary: 'you wanna beat the clankers again?',
+                    buttonText: 'HECK YEAHHH!'
+                };
+            }
+        }
+
+        if (!overlayContent) {
+            const winnerUpper = result.winner.toUpperCase();
+            overlayContent = {
+                title: `${winnerUpper} WON!`,
+                copy: `It seems like ${result.winner} won because of how pathetically the opponent played lol`,
+                secondary: 'you wanna play again?',
+                buttonText: 'Play again'
+            };
+        }
+
+        showResultOverlay(overlayContent);
     } else {
         showResultOverlay({
             title: 'WE HAVE A DRAW',
@@ -307,6 +389,7 @@ const endGame = (result) => {
 const handleResultAction = () => {
     hideResultOverlay();
     hideNotification();
+    CheckersAI.clearThinkingTimeout();
     introOverlay.classList.remove('is-hidden');
     gameContainer.classList.add('game-hidden');
     clearBoardUI();
@@ -314,6 +397,11 @@ const handleResultAction = () => {
     state.currentPlayer = null;
     state.draggedPiece = null;
     state.activeChainPiece = null;
+    state.humanColor = null;
+    state.aiColor = null;
+    state.bottomColor = null;
+    state.pendingPlayerColor = null;
+    hideFriendPrompt();
     clearForcedMoveHighlights();
     clearLastMoveHighlights();
 };
@@ -439,6 +527,13 @@ const canInteractWithPiece = (piece) => {
         logDebug('No board data for square, interaction blocked', { row, col });
         return false;
     }
+    if (state.opponentType === 'ai' && data.color === state.aiColor) {
+        logDebug('Interaction blocked: AI controls this piece');
+        if (state.currentPlayer === state.aiColor) {
+            showNotification(AI_TURN_MESSAGE);
+        }
+        return false;
+    }
     if (data.color !== state.currentPlayer) {
         logDebug('Blocked interaction with opponent piece', { requested: data.color, currentPlayer: state.currentPlayer });
         return false;
@@ -506,7 +601,7 @@ const attemptMoveToSquare = (square) => {
     executeMove(move);
 };
 
-const executeMove = (move) => {
+const executeMove = (move, automatedContext = null) => {
     const piece = state.selectedPiece;
     if (!piece) return;
 
@@ -542,8 +637,10 @@ const executeMove = (move) => {
     clearHighlights();
     state.moveLookup = new Map();
 
+    const activeColor = state.currentPlayer;
+
     if (result.wasCapture) {
-        const followUp = CheckersRules.getLegalMovesForPiece(boardState, move.to.row, move.to.col, state.currentPlayer);
+        const followUp = CheckersRules.getLegalMovesForPiece(boardState, move.to.row, move.to.col, activeColor);
         if (followUp.captures.length > 0) {
             state.activeChainPiece = piece;
             selectPiece(piece);
@@ -551,6 +648,20 @@ const executeMove = (move) => {
             setLastMoveHighlights(originSquare, targetSquare);
             logDebug('Continuing capture chain', { from: move.to, options: followUp.captures.length });
             updateForcedMoveHighlights();
+            if (automatedContext && typeof automatedContext.chooseNextAutomatedMove === 'function') {
+                const nextMove = automatedContext.chooseNextAutomatedMove(followUp.captures);
+                if (nextMove) {
+                    const delay = typeof automatedContext.automatedDelay === 'number'
+                        ? automatedContext.automatedDelay
+                        : CheckersAI.getChainDelay();
+                    CheckersAI.clearThinkingTimeout();
+                    state.aiMoveTimeout = setTimeout(() => {
+                        state.aiMoveTimeout = null;
+                        state.selectedPiece = piece;
+                        executeMove(nextMove, automatedContext);
+                    }, delay);
+                }
+            }
             return;
         }
     }
@@ -558,13 +669,15 @@ const executeMove = (move) => {
     state.activeChainPiece = null;
     clearSelection();
     setLastMoveHighlights(originSquare, targetSquare);
-    state.currentPlayer = state.currentPlayer === 'black' ? 'red' : 'black';
+    state.currentPlayer = activeColor === 'black' ? 'red' : 'black';
     logDebug('Turn switched', { currentPlayer: state.currentPlayer });
     updateForcedMoveHighlights();
     const gameStatus = evaluateGameState();
     if (gameStatus.status !== 'ongoing') {
         endGame(gameStatus);
+        return;
     }
+    CheckersAI.queueMoveIfNeeded();
 };
 
 for (let row = 0; row < 8; row++) {
@@ -658,6 +771,7 @@ const handleBoardClick = (event) => {
 const startGame = (playerColor) => {
     hideResultOverlay();
     hideNotification();
+    CheckersAI.clearThinkingTimeout();
     CheckersRules.setBottomColor(playerColor);
     initializeBoard(playerColor);
     state.currentPlayer = playerColor;
@@ -665,18 +779,69 @@ const startGame = (playerColor) => {
     state.activeChainPiece = null;
     state.moveLookup = new Map();
     state.gameOver = false;
+    state.bottomColor = playerColor;
+    state.humanColor = playerColor;
+    state.aiColor = state.opponentType === 'ai' ? (playerColor === 'black' ? 'red' : 'black') : null;
+    state.pendingPlayerColor = null;
     updateForcedMoveHighlights();
     logDebug('Game started', { playerColor });
     gameContainer.classList.remove('game-hidden');
     introOverlay.classList.add('is-hidden');
+    CheckersAI.queueMoveIfNeeded();
 };
 
+CheckersAI.configure({
+    state,
+    boardState,
+    getSquareElement,
+    logDebug,
+    evaluateGameState,
+    endGame,
+    executeMove
+});
+
 resultAction.addEventListener('click', handleResultAction);
+
+if (opponentChoiceButtons.length) {
+    setOpponentType(state.opponentType);
+    opponentChoiceButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const choice = button.dataset.opponentChoice;
+            if (!choice) return;
+            setOpponentType(choice);
+        });
+    });
+} else {
+    state.opponentType = 'human';
+}
+
+if (friendPromptButtons.length) {
+    friendPromptButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const response = button.dataset.friendResponse;
+            const pendingColor = state.pendingPlayerColor;
+            if (response === 'friends') {
+                window.open(FRIEND_LINK_URL, '_blank', 'noopener,noreferrer');
+            }
+            state.pendingPlayerColor = null;
+            hideFriendPrompt();
+            if (pendingColor) {
+                startGame(pendingColor);
+            } else if (introOverlay) {
+                introOverlay.classList.remove('is-hidden');
+            }
+        });
+    });
+}
 
 playerChoiceButtons.forEach((button) => {
     button.addEventListener('click', () => {
         const choice = button.dataset.playerChoice;
         if (!choice) return;
+        if (state.opponentType === 'human') {
+            showFriendPrompt(choice);
+            return;
+        }
         startGame(choice);
     });
 });
