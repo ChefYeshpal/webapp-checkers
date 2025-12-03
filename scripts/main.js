@@ -40,6 +40,66 @@ const getPieceAssetPath = (color, isKing) => {
     return isKing ? 'assets/redpiece_king.png' : 'assets/redpiece.png';
 };
 
+// Piecec moves
+const prefersReducedMotion = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+        return false;
+    }
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
+const animatePieceMovement = (piece, targetSquare) => {
+    const startRect = piece.getBoundingClientRect();
+    targetSquare.appendChild(piece);
+
+    if (prefersReducedMotion()) {
+        piece.classList.remove('piece-moving');
+        piece.style.transition = '';
+        piece.style.transform = '';
+        return;
+    }
+
+    const endRect = piece.getBoundingClientRect();
+    const deltaX = startRect.left - endRect.left;
+    const deltaY = startRect.top - endRect.top;
+
+    if (Math.abs(deltaX) < 0.5 && Math.abs(deltaY) < 0.5) {
+        piece.classList.remove('piece-moving');
+        piece.style.transition = '';
+        piece.style.transform = '';
+        return;
+    }
+
+    piece.classList.add('piece-moving');
+    piece.style.transition = 'none';
+    piece.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    piece.getBoundingClientRect();
+
+    requestAnimationFrame(() => {
+        piece.style.transition = '';
+        piece.style.transform = '';
+    });
+
+    let fallbackTimeout;
+    const clearMovementState = (event) => {
+        if (event && event.propertyName && event.propertyName !== 'transform') {
+            return;
+        }
+        piece.classList.remove('piece-moving');
+        piece.style.transition = '';
+        if (!event) {
+            piece.style.transform = '';
+        }
+        piece.removeEventListener('transitionend', clearMovementState);
+        if (fallbackTimeout) {
+            clearTimeout(fallbackTimeout);
+        }
+    };
+
+    piece.addEventListener('transitionend', clearMovementState);
+    fallbackTimeout = setTimeout(clearMovementState, 400);
+};
+
 const updatePieceVisuals = (piece, isKing) => {
     const color = piece.dataset.color;
     piece.dataset.king = isKing ? 'true' : 'false';
@@ -425,7 +485,7 @@ const executeMove = (move) => {
     if (!targetSquare) return;
 
     const result = CheckersRules.applyMove(boardState, move);
-    targetSquare.appendChild(piece);
+    animatePieceMovement(piece, targetSquare);
     logDebug('Move applied', {
         type: move.type,
         from: move.from,
