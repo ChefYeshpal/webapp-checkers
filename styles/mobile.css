@@ -1,0 +1,96 @@
+body {
+    align-items: flex-start;
+    padding: 1rem 0.75rem 2rem;
+    min-height: 100vh;
+}
+
+.container {
+    gap: 1rem;
+    padding: 0.5rem 0;
+}
+
+h1 {
+    letter-spacing: 0.18em;
+    line-height: 1.2;
+}
+
+.notification {
+    left: 1rem;
+    right: 1rem;
+    top: 1rem;
+    width: auto;
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+.intro-overlay,
+.friend-overlay,
+.difficulty-overlay,
+.result-overlay {
+    padding: 1rem;
+}
+
+.intro-dialog,
+.friend-dialog,
+.difficulty-dialog,
+.result-dialog {
+    width: 100%;
+    max-width: 100%;
+    padding: 1.25rem;
+    border-radius: 16px;
+    gap: 0.85rem;
+}
+
+.intro-rules {
+    font-size: 0.95rem;
+}
+
+.intro-choice span {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.intro-buttons,
+.intro-buttons--compact,
+.friend-buttons,
+.difficulty-buttons {
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+}
+
+.intro-button,
+.friend-button,
+.difficulty-button,
+.result-button {
+    width: 100%;
+    min-height: 48px;
+    font-size: 1rem;
+    touch-action: manipulation;
+}
+
+button:focus-visible {
+    outline: 3px solid #67d4ff;
+    outline-offset: 3px;
+}
+
+.game-container {
+    width: 100%;
+    align-items: center;
+}
+
+.game-board {
+    width: 100%;
+    max-width: 360px;
+    border-width: 1px;
+}
+
+.result-button {
+    margin-top: 1rem;
+}
+
+@media (orientation: landscape) {
+    body {
+        align-items: center;
+    }
+}
