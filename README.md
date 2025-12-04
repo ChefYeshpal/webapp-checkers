@@ -23,6 +23,9 @@ So here we have it folks, last week of siege, one last project, really good time
 - [x] an ai to play again
     - [x] variable difficulty?
     - [x] togglable
+- [x] Custom board setup
+    - Always square
+    - Avilable after you play one game
 
 ## Tech stack
 

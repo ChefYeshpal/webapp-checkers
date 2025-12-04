@@ -1,9 +1,7 @@
 (function () {
     const overlay = document.getElementById('customBoardOverlay');
-    const rowsInput = document.getElementById('customBoardRows');
-    const colsInput = document.getElementById('customBoardCols');
-    const rowsValue = document.getElementById('customBoardRowsValue');
-    const colsValue = document.getElementById('customBoardColsValue');
+    const sizeInput = document.getElementById('customBoardSize');
+    const sizeValue = document.getElementById('customBoardSizeValue');
     const playButton = document.getElementById('customBoardPlay');
     const cancelButton = document.getElementById('customBoardCancel');
 
@@ -14,13 +12,13 @@
         setDefaultSize: () => {}
     };
 
-    if (!overlay || !rowsInput || !colsInput || !rowsValue || !colsValue || !playButton || !cancelButton) {
+    if (!overlay || !sizeInput || !sizeValue || !playButton || !cancelButton) {
         window.CustomBoard = noopModule;
         return;
     }
 
-    const minSize = Number.parseInt(rowsInput.min, 10) || 4;
-    const maxSize = Number.parseInt(rowsInput.max, 10) || 12;
+    const minSize = Number.parseInt(sizeInput.min, 10) || 4;
+    const maxSize = Number.parseInt(sizeInput.max, 10) || 12;
 
     const clamp = (value) => {
         const parsed = Number.parseInt(value, 10);
@@ -28,29 +26,40 @@
         return Math.max(minSize, Math.min(maxSize, parsed));
     };
 
-    let currentSize = { rows: clamp(rowsInput.value), cols: clamp(colsInput.value) };
+    let currentSize = clamp(sizeInput.value);
     let handlers = {
         onApply: null,
         getDefaultSize: null
     };
 
+    const formatDisplay = (value) => `${value} x ${value}`;
+
     const updateLabel = (label, value) => {
-        label.textContent = `${value}`;
+        label.textContent = formatDisplay(value);
     };
 
-    const syncInput = (input, label, value) => {
+    const syncInput = (value) => {
         const sanitized = clamp(value);
-        input.value = sanitized;
-        updateLabel(label, sanitized);
+        sizeInput.value = sanitized;
+        updateLabel(sizeValue, sanitized);
         return sanitized;
+    };
+
+    currentSize = syncInput(currentSize);
+
+    const deriveSizeFromDefaults = (defaults) => {
+        if (defaults == null) return currentSize;
+        if (typeof defaults === 'number') return clamp(defaults);
+        if (typeof defaults === 'object') {
+            if (defaults.rows != null) return clamp(defaults.rows);
+            if (defaults.cols != null) return clamp(defaults.cols);
+        }
+        return currentSize;
     };
 
     const open = (size) => {
         const defaults = size || (typeof handlers.getDefaultSize === 'function' ? handlers.getDefaultSize() : currentSize);
-        currentSize = {
-            rows: syncInput(rowsInput, rowsValue, defaults?.rows ?? currentSize.rows),
-            cols: syncInput(colsInput, colsValue, defaults?.cols ?? currentSize.cols)
-        };
+        currentSize = syncInput(deriveSizeFromDefaults(defaults));
         overlay.classList.remove('is-hidden');
         overlay.setAttribute('aria-hidden', 'false');
         playButton.focus();
@@ -61,18 +70,14 @@
         overlay.setAttribute('aria-hidden', 'true');
     };
 
-    rowsInput.addEventListener('input', () => {
-        currentSize.rows = syncInput(rowsInput, rowsValue, rowsInput.value);
-    });
-
-    colsInput.addEventListener('input', () => {
-        currentSize.cols = syncInput(colsInput, colsValue, colsInput.value);
+    sizeInput.addEventListener('input', () => {
+        currentSize = syncInput(sizeInput.value);
     });
 
     playButton.addEventListener('click', () => {
         close();
         if (typeof handlers.onApply === 'function') {
-            handlers.onApply({ ...currentSize });
+            handlers.onApply({ rows: currentSize, cols: currentSize });
         }
     });
 
@@ -97,18 +102,12 @@
     const init = (options = {}) => {
         handlers = { ...handlers, ...options };
         const defaults = typeof handlers.getDefaultSize === 'function' ? handlers.getDefaultSize() : currentSize;
-        currentSize = {
-            rows: syncInput(rowsInput, rowsValue, defaults?.rows ?? currentSize.rows),
-            cols: syncInput(colsInput, colsValue, defaults?.cols ?? currentSize.cols)
-        };
+        currentSize = syncInput(deriveSizeFromDefaults(defaults));
     };
 
     const setDefaultSize = (size) => {
         if (!size) return;
-        currentSize = {
-            rows: syncInput(rowsInput, rowsValue, size.rows ?? currentSize.rows),
-            cols: syncInput(colsInput, colsValue, size.cols ?? currentSize.cols)
-        };
+        currentSize = syncInput(deriveSizeFromDefaults(size));
     };
 
     window.CustomBoard = {

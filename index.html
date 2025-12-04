@@ -79,19 +79,14 @@
         <div class="custom-board-dialog" role="dialog" aria-modal="true" aria-labelledby="customBoardTitle">
             <p class="custom-board-eyebrow">board remix</p>
             <h2 id="customBoardTitle">Customise your next chaos</h2>
-            <p class="custom-board-copy">Pick the length x breadth for the next match. Minimum is 4x4 because physics says so.</p>
+            <p class="custom-board-copy">Pick the size for your next square board. Minimum is 4x4 because I say so</p>
             <div class="custom-board-sliders">
-                <label class="custom-board-label" for="customBoardRows">
-                    Length (rows)
-                    <span class="custom-board-value" id="customBoardRowsValue">8</span>
+                <label class="custom-board-label" for="customBoardSize">
+                    Board size (rows & cols)
+                    <span class="custom-board-value" id="customBoardSizeValue">8 x 8</span>
                 </label>
-                <input type="range" min="4" max="12" step="1" value="8" id="customBoardRows">
-                <label class="custom-board-label" for="customBoardCols">
-                    Breadth (columns)
-                    <span class="custom-board-value" id="customBoardColsValue">8</span>
-                </label>
-                <input type="range" min="4" max="12" step="1" value="8" id="customBoardCols">
-                <p class="custom-board-hint">Pieces fill the top and bottom rows evenly, so nothing feels cursed.</p>
+                <input type="range" min="4" max="12" step="1" value="8" id="customBoardSize">
+                <p class="custom-board-hint">Whatever you pick, I'll mirror it across both axes so the pieces behave.</p>
             </div>
             <div class="custom-board-actions">
                 <button type="button" class="custom-board-button" id="customBoardPlay">Play game</button>

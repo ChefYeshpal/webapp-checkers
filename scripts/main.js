@@ -440,10 +440,11 @@ const closeCustomBoardDialog = () => {
 
 const applyCustomDimensionsAndStart = (rows, cols) => {
     const currentSize = state.boardSize || CheckersRules.getBoardSize();
-    const sanitizedRows = normalizeDimension(rows, currentSize.rows || 8);
-    const sanitizedCols = normalizeDimension(cols, currentSize.cols || 8);
-    CheckersRules.setBoardSize(sanitizedRows, sanitizedCols);
-    logDebug('Custom board configured', { rows: sanitizedRows, cols: sanitizedCols });
+    const fallback = currentSize.rows || currentSize.cols || 8;
+    const requested = rows ?? cols;
+    const sanitized = normalizeDimension(requested, fallback);
+    CheckersRules.setBoardSize(sanitized, sanitized);
+    logDebug('Custom board configured', { rows: sanitized, cols: sanitized });
     const preferredColor = state.humanColor || state.bottomColor || 'black';
     startGame(preferredColor);
 };
