@@ -1,5 +1,6 @@
 const CheckersRules = (() => {
-	const SIZE = 8;
+	let boardRows = 8;
+	let boardCols = 8;
 	const BASE_DIRECTIONS = {
 		up: [
 			[-1, -1],
@@ -23,9 +24,22 @@ const CheckersRules = (() => {
 		[1, 1]
 	];
 
-	const inBounds = (row, col) => row >= 0 && row < SIZE && col >= 0 && col < SIZE;
+	const sanitizeDimension = (value, fallback) => {
+		const parsed = Number.parseInt(value, 10);
+		if (Number.isNaN(parsed)) return fallback;
+		return Math.max(4, parsed);
+	};
 
-	const createEmptyBoard = () => Array.from({ length: SIZE }, () => Array(SIZE).fill(null));
+	const setBoardSize = (rows, cols) => {
+		boardRows = sanitizeDimension(rows, boardRows);
+		boardCols = sanitizeDimension(cols, boardCols);
+	};
+
+	const getBoardSize = () => ({ rows: boardRows, cols: boardCols });
+
+	const inBounds = (row, col) => row >= 0 && row < boardRows && col >= 0 && col < boardCols;
+
+	const createEmptyBoard = () => Array.from({ length: boardRows }, () => Array(boardCols).fill(null));
 
 	const placePiece = (state, row, col, color, isKing = false) => {
 		state[row][col] = { color, isKing };
@@ -98,8 +112,8 @@ const CheckersRules = (() => {
 	
 	// mmm capture yum yum
 	const playerHasCapture = (state, player) => {
-		for (let row = 0; row < SIZE; row++) {
-			for (let col = 0; col < SIZE; col++) {
+		for (let row = 0; row < boardRows; row++) {
+			for (let col = 0; col < boardCols; col++) {
 				const piece = getPiece(state, row, col);
 				if (!piece || piece.color !== player) continue;
 				const { captures } = computePieceMoves(state, row, col);
@@ -111,8 +125,8 @@ const CheckersRules = (() => {
 
 	const getAllLegalMovesForPlayer = (state, player) => {
 		const aggregated = { moves: [], captures: [] };
-		for (let row = 0; row < SIZE; row++) {
-			for (let col = 0; col < SIZE; col++) {
+		for (let row = 0; row < boardRows; row++) {
+			for (let col = 0; col < boardCols; col++) {
 				const piece = getPiece(state, row, col);
 				if (!piece || piece.color !== player) continue;
 				const legal = computePieceMoves(state, row, col);
@@ -145,7 +159,7 @@ const CheckersRules = (() => {
 		let becameKing = false;
 		if (!piece.isKing) {
 			const reachedTop = piece.color === bottomColor && move.to.row === 0;
-			const reachedBottom = piece.color === topColor && move.to.row === SIZE - 1;
+			const reachedBottom = piece.color === topColor && move.to.row === boardRows - 1;
 			if (reachedTop || reachedBottom) {
 				piece.isKing = true;
 				becameKing = true;
@@ -163,8 +177,8 @@ const CheckersRules = (() => {
 
 	const getForcedMovesForPlayer = (state, player) => {
 		const forced = [];
-		for (let row = 0; row < SIZE; row++) {
-			for (let col = 0; col < SIZE; col++) {
+		for (let row = 0; row < boardRows; row++) {
+			for (let col = 0; col < boardCols; col++) {
 				const piece = getPiece(state, row, col);
 				if (!piece || piece.color !== player) continue;
 				const { captures } = computePieceMoves(state, row, col);
@@ -187,6 +201,8 @@ const CheckersRules = (() => {
 		getForcedMovesForPlayer,
 		applyMove,
 		setBottomColor,
-		getAllLegalMovesForPlayer
+		getAllLegalMovesForPlayer,
+		setBoardSize,
+		getBoardSize
 	};
 })();

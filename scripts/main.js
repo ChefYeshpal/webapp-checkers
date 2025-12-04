@@ -19,9 +19,10 @@ const resultTitle = document.getElementById('resultTitle');
 const resultCopy = document.getElementById('resultCopy');
 const resultSecondary = document.getElementById('resultSecondary');
 const resultAction = document.getElementById('resultAction');
+const customizeBoardTrigger = document.getElementById('customizeBoardTrigger');
 const notificationElement = document.getElementById('moveNotification');
-const board = [];
-const boardState = CheckersRules.createEmptyBoard();
+let boardSquares = [];
+let boardState = CheckersRules.createEmptyBoard();
 
 const state = {
     draggedPiece: null,
@@ -38,7 +39,8 @@ const state = {
     bottomColor: null,
     aiMoveTimeout: null,
     pendingPlayerColor: null,
-    aiDifficulty: 'medium'
+    aiDifficulty: 'medium',
+    boardSize: CheckersRules.getBoardSize()
 };
 
 const FORCE_MOVE_MESSAGE = 'Move is not allowed';
@@ -424,7 +426,38 @@ const endGame = (result) => {
     logDebug('Game ended', result);
 };
 
+const normalizeDimension = (value, fallback) => {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isNaN(parsed)) return fallback;
+    return Math.max(4, parsed);
+};
+
+const closeCustomBoardDialog = () => {
+    if (window.CustomBoard && typeof window.CustomBoard.close === 'function') {
+        window.CustomBoard.close();
+    }
+};
+
+const applyCustomDimensionsAndStart = (rows, cols) => {
+    const currentSize = state.boardSize || CheckersRules.getBoardSize();
+    const sanitizedRows = normalizeDimension(rows, currentSize.rows || 8);
+    const sanitizedCols = normalizeDimension(cols, currentSize.cols || 8);
+    CheckersRules.setBoardSize(sanitizedRows, sanitizedCols);
+    logDebug('Custom board configured', { rows: sanitizedRows, cols: sanitizedCols });
+    const preferredColor = state.humanColor || state.bottomColor || 'black';
+    startGame(preferredColor);
+};
+
+const openCustomBoardDialog = () => {
+    if (!window.CustomBoard || typeof window.CustomBoard.open !== 'function') {
+        return;
+    }
+    const size = state.boardSize || CheckersRules.getBoardSize();
+    window.CustomBoard.open(size);
+};
+
 const handleResultAction = () => {
+    closeCustomBoardDialog();
     hideResultOverlay();
     hideNotification();
     CheckersAI.clearThinkingTimeout();
@@ -477,22 +510,28 @@ const highlightAvailableMoves = (legal) => {
 };
 
 const buildBoardGrid = () => {
-    if (board.length) return;
-    for (let row = 0; row < 8; row++) {
-        for (let col = 0; col < 8; col++) {
+    const { rows, cols } = CheckersRules.getBoardSize();
+    gameBoard.innerHTML = '';
+    boardSquares = [];
+    gameBoard.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+    gameBoard.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+    gameBoard.style.aspectRatio = `${rows} / ${cols}`;
+
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
             const square = document.createElement('div');
             square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
             square.dataset.row = row;
             square.dataset.col = col;
             square.id = `square-${row}-${col}`;
             gameBoard.appendChild(square);
-            board.push(square);
+            boardSquares.push(square);
         }
     }
 };
 
 const clearBoardUI = () => {
-    board.forEach((square) => {
+    boardSquares.forEach((square) => {
         square.innerHTML = '';
     });
     clearSelection();
@@ -501,21 +540,23 @@ const clearBoardUI = () => {
 };
 
 const resetBoardState = () => {
-    for (let row = 0; row < boardState.length; row++) {
-        boardState[row].fill(null);
-    }
+    boardState = CheckersRules.createEmptyBoard();
+    CheckersAI.configure({ boardState });
 };
 
 
 const seedStartingPieces = (bottomColor) => {
     const topColor = bottomColor === 'black' ? 'red' : 'black';
-    board.forEach((square, index) => {
-        const row = Math.floor(index / 8);
-        const col = index % 8;
+    const { rows } = CheckersRules.getBoardSize();
+    const rowsPerSide = Math.max(1, Math.floor((rows - 2) / 2));
+
+    boardSquares.forEach((square) => {
+        const row = Number(square.dataset.row);
+        const col = Number(square.dataset.col);
         if ((row + col) % 2 === 0) return;
-        if (row <= 2) {
+        if (row < rowsPerSide) {
             placePieceOnSquare(square, topColor);
-        } else if (row >= 5) {
+        } else if (row >= rows - rowsPerSide) {
             placePieceOnSquare(square, bottomColor);
         }
     });
@@ -526,7 +567,11 @@ const initializeBoard = (bottomColor) => {
     clearBoardUI();
     resetBoardState();
     seedStartingPieces(bottomColor);
-    logDebug('Board init', { bottomColor });
+    state.boardSize = CheckersRules.getBoardSize();
+    if (window.CustomBoard && typeof window.CustomBoard.setDefaultSize === 'function') {
+        window.CustomBoard.setDefaultSize(state.boardSize);
+    }
+    logDebug('Board init', { bottomColor, boardSize: state.boardSize });
     updateForcedMoveHighlights();
 };
 
@@ -715,30 +760,6 @@ const executeMove = (move, automatedContext = null) => {
     CheckersAI.queueMoveIfNeeded();
 };
 
-for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-        const square = document.createElement('div');
-        square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
-        square.dataset.row = row;
-        square.dataset.col = col;
-        square.id = `square-${row}-${col}`;
-
-        gameBoard.appendChild(square);
-        board.push(square);
-    }
-}
-
-board.forEach((square, index) => {
-    const row = Math.floor(index / 8);
-    const col = index % 8;
-    if (row <= 2 && (row + col) % 2 === 1) {
-        placePieceOnSquare(square, 'black');
-    } else if (row >= 5 && (row + col) % 2 === 1) {
-        placePieceOnSquare(square, 'red');
-    }
-});
-logDebug('Board init');
-
 const handleDragStart = (event) => {
     if (state.gameOver) {
         event.preventDefault();
@@ -826,6 +847,19 @@ const startGame = (playerColor) => {
     CheckersAI.queueMoveIfNeeded();
 };
 
+const initCustomBoardModule = () => {
+    if (!window.CustomBoard || typeof window.CustomBoard.init !== 'function') {
+        return;
+    }
+    window.CustomBoard.init({
+        onApply: (size) => {
+            if (!size) return;
+            applyCustomDimensionsAndStart(size.rows, size.cols);
+        },
+        getDefaultSize: () => state.boardSize
+    });
+};
+
 CheckersAI.configure({
     state,
     boardState,
@@ -836,7 +870,15 @@ CheckersAI.configure({
     executeMove
 });
 
+initCustomBoardModule();
+
 resultAction.addEventListener('click', handleResultAction);
+
+if (customizeBoardTrigger) {
+    customizeBoardTrigger.addEventListener('click', () => {
+        openCustomBoardDialog();
+    });
+}
 
 if (opponentChoiceButtons.length) {
     setOpponentType(state.opponentType);

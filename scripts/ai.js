@@ -53,11 +53,23 @@ const CheckersAI = (() => {
         typeof context.executeMove === 'function'
     );
 
+    const getBoardMetrics = (boardOverride = null) => {
+        const target = boardOverride || context.boardState;
+        const rows = target && target.length ? target.length : 8;
+        const firstRow = target && target.length ? target[0] : null;
+        const cols = firstRow && firstRow.length ? firstRow.length : rows || 8;
+        return {
+            rows,
+            cols,
+            lastRow: rows > 0 ? rows - 1 : 0,
+            centerCol: cols > 0 ? (cols - 1) / 2 : 0
+        };
+    };
+
     const getPromotionRowForColor = (color) => {
-        if (!context.state || !context.state.bottomColor) {
-            return color === 'black' ? 0 : 7;
-        }
-        return color === context.state.bottomColor ? 0 : 7;
+        const metrics = getBoardMetrics();
+        const assumedBottom = context.state && context.state.bottomColor ? context.state.bottomColor : 'red';
+        return color === assumedBottom ? 0 : metrics.lastRow;
     };
 
     const scoreMove = (move) => {
@@ -75,20 +87,22 @@ const CheckersAI = (() => {
             }
         }
 
+        const metrics = getBoardMetrics();
         if (!piece.isKing) {
             const promotionRow = getPromotionRowForColor(piece.color);
             if (move.to.row === promotionRow) {
                 score += 5.5;
             } else {
                 const distance = Math.abs(move.to.row - promotionRow);
-                score += (7 - distance) * 0.2;
+                const span = Math.max(0, metrics.lastRow);
+                score += Math.max(0, span - distance) * 0.2;
             }
         } else {
             score += 0.4;
         }
 
-        const centerOffset = Math.abs(move.to.col - 3.5);
-        score += (3.5 - centerOffset) * 0.35;
+        const centerOffset = Math.abs(move.to.col - metrics.centerCol);
+        score += (metrics.centerCol - centerOffset) * 0.35;
 
         return score;
     };
@@ -134,16 +148,18 @@ const CheckersAI = (() => {
 
     const evaluateBoard = (board, aiColor) => {
         const opponent = aiColor === 'black' ? 'red' : 'black';
+        const metrics = getBoardMetrics(board);
+        const assumedBottom = context.state && context.state.bottomColor ? context.state.bottomColor : 'red';
         let score = 0;
         for (let row = 0; row < board.length; row++) {
             for (let col = 0; col < board[row].length; col++) {
                 const piece = board[row][col];
                 if (!piece) continue;
                 const baseValue = piece.isKing ? 5 : 3;
-                const centrality = 3.5 - Math.abs(col - 3.5);
-                const promotionRow = getPromotionRowForColor(piece.color);
+                const centrality = metrics.centerCol - Math.abs(col - metrics.centerCol);
+                const promotionRow = piece.color === assumedBottom ? 0 : metrics.lastRow;
                 const distanceToPromotion = Math.abs(promotionRow - row);
-                const advancement = Math.max(0, 7 - distanceToPromotion);
+                const advancement = Math.max(0, metrics.lastRow - distanceToPromotion);
                 const pieceScore = baseValue + centrality * 0.25 + advancement * 0.12;
                 if (piece.color === aiColor) {
                     score += pieceScore;
