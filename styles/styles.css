@@ -297,6 +297,10 @@ h1::after {
 
 .result-copy,
 .result-secondary {
+
+    .difficulty-dialog {
+        padding: 1.5rem;
+    }
     color: rgba(255, 255, 255, 0.75);
     line-height: 1.6;
 }
@@ -519,6 +523,79 @@ h1::after {
 .friend-button:hover {
     transform: translateY(-1px);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.difficulty-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 5, 5, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1002;
+    transition: opacity 0.35s ease;
+    opacity: 1;
+}
+
+.difficulty-overlay.is-hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.difficulty-dialog {
+    width: min(360px, 90vw);
+    background: #151515;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 1.75rem;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    text-align: center;
+}
+
+.difficulty-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.35em;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.difficulty-copy {
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.5;
+}
+
+.difficulty-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.difficulty-button {
+    border: none;
+    background: #0f0f0f;
+    color: #f5f5f5;
+    padding: 0.85rem 1.2rem;
+    border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.difficulty-button:hover {
+    transform: translateY(-1px);
+    background: #1d1d1d;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+}
+
+.difficulty-button.is-active {
+    background: #f5f5f5;
+    color: #101010;
 }
 
 .intro-button.is-active:hover {

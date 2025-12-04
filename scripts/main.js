@@ -12,6 +12,8 @@ const playerChoiceButtons = document.querySelectorAll('[data-player-choice]');
 const opponentChoiceButtons = document.querySelectorAll('[data-opponent-choice]');
 const friendPromptOverlay = document.getElementById('friendPromptOverlay');
 const friendPromptButtons = document.querySelectorAll('[data-friend-response]');
+const difficultyOverlay = document.getElementById('difficultyOverlay');
+const difficultyButtons = document.querySelectorAll('[data-difficulty]');
 const resultOverlay = document.getElementById('resultOverlay');
 const resultTitle = document.getElementById('resultTitle');
 const resultCopy = document.getElementById('resultCopy');
@@ -35,7 +37,8 @@ const state = {
     aiColor: null,
     bottomColor: null,
     aiMoveTimeout: null,
-    pendingPlayerColor: null
+    pendingPlayerColor: null,
+    aiDifficulty: 'medium'
 };
 
 const FORCE_MOVE_MESSAGE = 'Move is not allowed';
@@ -100,9 +103,44 @@ const showFriendPrompt = (playerColor) => {
     friendPromptOverlay.classList.remove('is-hidden');
 };
 
+const markDifficultySelection = (difficulty) => {
+    if (!difficultyButtons.length) return;
+    difficultyButtons.forEach((button) => {
+        const isActive = button.dataset.difficulty === difficulty;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+};
+
+const hideDifficultyPrompt = () => {
+    if (!difficultyOverlay) return;
+    difficultyOverlay.classList.add('is-hidden');
+    difficultyOverlay.setAttribute('aria-hidden', 'true');
+};
+
+const showDifficultyPrompt = (playerColor) => {
+    state.pendingPlayerColor = playerColor;
+    if (!difficultyOverlay || !difficultyButtons.length) {
+        startGame(playerColor);
+        return;
+    }
+    if (introOverlay) {
+        introOverlay.classList.add('is-hidden');
+    }
+    hideFriendPrompt();
+    markDifficultySelection(state.aiDifficulty || 'medium');
+    difficultyOverlay.classList.remove('is-hidden');
+    difficultyOverlay.setAttribute('aria-hidden', 'false');
+};
+
 const setOpponentType = (choice) => {
     state.opponentType = choice === 'human' ? 'human' : 'ai';
     returnToIntroFromFriendPrompt();
+    hideDifficultyPrompt();
+    state.pendingPlayerColor = null;
+    if (introOverlay && gameContainer.classList.contains('game-hidden')) {
+        introOverlay.classList.remove('is-hidden');
+    }
     if (state.opponentType !== 'ai') {
         CheckersAI.clearThinkingTimeout();
         state.aiColor = null;
@@ -402,6 +440,7 @@ const handleResultAction = () => {
     state.bottomColor = null;
     state.pendingPlayerColor = null;
     hideFriendPrompt();
+    hideDifficultyPrompt();
     clearForcedMoveHighlights();
     clearLastMoveHighlights();
 };
@@ -768,6 +807,7 @@ const startGame = (playerColor) => {
     hideResultOverlay();
     hideNotification();
     CheckersAI.clearThinkingTimeout();
+    hideDifficultyPrompt();
     CheckersRules.setBottomColor(playerColor);
     initializeBoard(playerColor);
     state.currentPlayer = playerColor;
@@ -830,6 +870,24 @@ if (friendPromptButtons.length) {
     });
 }
 
+if (difficultyButtons.length) {
+    difficultyButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            const level = button.dataset.difficulty;
+            if (!level) return;
+            state.aiDifficulty = level;
+            const pendingColor = state.pendingPlayerColor;
+            state.pendingPlayerColor = null;
+            hideDifficultyPrompt();
+            if (pendingColor) {
+                startGame(pendingColor);
+            } else if (introOverlay) {
+                introOverlay.classList.remove('is-hidden');
+            }
+        });
+    });
+}
+
 playerChoiceButtons.forEach((button) => {
     button.addEventListener('click', () => {
         const choice = button.dataset.playerChoice;
@@ -838,7 +896,7 @@ playerChoiceButtons.forEach((button) => {
             showFriendPrompt(choice);
             return;
         }
-        startGame(choice);
+        showDifficultyPrompt(choice);
     });
 });
 

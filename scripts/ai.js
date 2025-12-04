@@ -1,6 +1,15 @@
 const CheckersAI = (() => {
-    const THINKING_DELAY = 550;
-    const CHAIN_DELAY = 320;
+    const DEFAULT_DIFFICULTY = 'medium';
+    const THINKING_DELAYS = {
+        easy: 350,
+        medium: 550,
+        hard: 750
+    };
+    const CHAIN_DELAYS = {
+        easy: 220,
+        medium: 320,
+        hard: 380
+    };
 
     const defaultContext = {
         state: null,
@@ -25,7 +34,17 @@ const CheckersAI = (() => {
         }
     };
 
-    const getChainDelay = () => CHAIN_DELAY;
+    const getDifficulty = () => {
+        const level = context.state && context.state.aiDifficulty;
+        if (level === 'easy' || level === 'hard') {
+            return level;
+        }
+        return DEFAULT_DIFFICULTY;
+    };
+
+    const getThinkingDelay = () => THINKING_DELAYS[getDifficulty()] || THINKING_DELAYS[DEFAULT_DIFFICULTY];
+
+    const getChainDelay = () => CHAIN_DELAYS[getDifficulty()] || CHAIN_DELAYS[DEFAULT_DIFFICULTY];
 
     const hasCoreDependencies = () => (
         context.state &&
@@ -44,7 +63,7 @@ const CheckersAI = (() => {
     const scoreMove = (move) => {
         const piece = CheckersRules.getPiece(context.boardState, move.from.row, move.from.col);
         if (!piece) return -Infinity;
-        let score = Math.random() * 0.15;
+        let score = Math.random() * 0.1;
 
         if (move.type === 'capture') {
             score += 10;
@@ -74,24 +93,127 @@ const CheckersAI = (() => {
         return score;
     };
 
-    const chooseMove = (moves) => {
+    const chooseMoveMedium = (moves) => {
         if (!moves || !moves.length) return null;
-        let bestMove = moves[0];
-        let bestScore = scoreMove(bestMove);
-        for (let i = 1; i < moves.length; i++) {
-            const currentScore = scoreMove(moves[i]);
-            if (currentScore > bestScore) {
-                bestMove = moves[i];
+        let bestScore = -Infinity;
+        const candidates = [];
+        moves.forEach((move) => {
+            const currentScore = scoreMove(move);
+            if (currentScore > bestScore + 1e-4) {
                 bestScore = currentScore;
+                candidates.length = 0;
+                candidates.push(move);
+            } else if (Math.abs(currentScore - bestScore) <= 1e-4) {
+                candidates.push(move);
+            }
+        });
+        if (!candidates.length) {
+            return moves[Math.floor(Math.random() * moves.length)];
+        }
+        return candidates[Math.floor(Math.random() * candidates.length)];
+    };
+
+    const chooseMoveEasy = (moves) => {
+        if (!moves || !moves.length) return null;
+        return moves[Math.floor(Math.random() * moves.length)];
+    };
+
+    const cloneBoard = (board) => board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
+
+    const simulateMove = (board, move) => {
+        const nextBoard = cloneBoard(board);
+        const moveCopy = {
+            type: move.type,
+            from: { ...move.from },
+            to: { ...move.to },
+            captured: move.captured ? { ...move.captured } : null
+        };
+        CheckersRules.applyMove(nextBoard, moveCopy);
+        return nextBoard;
+    };
+
+    const evaluateBoard = (board, aiColor) => {
+        const opponent = aiColor === 'black' ? 'red' : 'black';
+        let score = 0;
+        for (let row = 0; row < board.length; row++) {
+            for (let col = 0; col < board[row].length; col++) {
+                const piece = board[row][col];
+                if (!piece) continue;
+                const baseValue = piece.isKing ? 5 : 3;
+                const centrality = 3.5 - Math.abs(col - 3.5);
+                const promotionRow = getPromotionRowForColor(piece.color);
+                const distanceToPromotion = Math.abs(promotionRow - row);
+                const advancement = Math.max(0, 7 - distanceToPromotion);
+                const pieceScore = baseValue + centrality * 0.25 + advancement * 0.12;
+                if (piece.color === aiColor) {
+                    score += pieceScore;
+                } else if (piece.color === opponent) {
+                    score -= pieceScore;
+                }
             }
         }
-        return bestMove;
+        return score;
+    };
+
+    const chooseMoveHard = (moves) => {
+        if (!moves || !moves.length) return null;
+        if (!context.boardState || !context.state) {
+            return chooseMoveMedium(moves);
+        }
+        const aiColor = context.state.aiColor;
+        if (!aiColor) {
+            return chooseMoveMedium(moves);
+        }
+        const opponentColor = aiColor === 'black' ? 'red' : 'black';
+        let bestMove = null;
+        let bestScore = -Infinity;
+
+        moves.forEach((move) => {
+            const afterAiMove = simulateMove(context.boardState, move);
+            const immediateScore = evaluateBoard(afterAiMove, aiColor);
+
+            const replyOptions = CheckersRules.getAllLegalMovesForPlayer(afterAiMove, opponentColor);
+            const replyPool = replyOptions.captures.length ? replyOptions.captures : replyOptions.moves;
+
+            let worstReplyScore = immediateScore;
+            if (replyPool.length) {
+                worstReplyScore = Infinity;
+                replyPool.forEach((replyMove) => {
+                    const afterReplyBoard = simulateMove(afterAiMove, replyMove);
+                    const replyScore = evaluateBoard(afterReplyBoard, aiColor);
+                    if (replyScore < worstReplyScore) {
+                        worstReplyScore = replyScore;
+                    }
+                });
+            } else {
+                worstReplyScore = immediateScore + 8;
+            }
+
+            const combinedScore = immediateScore * 0.55 + worstReplyScore * 0.45;
+            if (combinedScore > bestScore) {
+                bestScore = combinedScore;
+                bestMove = move;
+            }
+        });
+
+        return bestMove || chooseMoveMedium(moves);
+    };
+
+    const chooseMoveByDifficulty = (moves) => {
+        const difficulty = getDifficulty();
+        if (difficulty === 'easy') {
+            return chooseMoveEasy(moves);
+        }
+        if (difficulty === 'hard') {
+            return chooseMoveHard(moves);
+        }
+        return chooseMoveMedium(moves);
     };
 
     const createAutomatedContext = () => ({
         automated: true,
-        chooseNextAutomatedMove: (options) => chooseMove(options),
-        automatedDelay: CHAIN_DELAY
+        chooseNextAutomatedMove: (options) => chooseMoveByDifficulty(options),
+        automatedDelay: getChainDelay()
     });
 
     const performMove = () => {
@@ -116,7 +238,7 @@ const CheckersAI = (() => {
             return;
         }
 
-        const chosenMove = chooseMove(pool);
+        const chosenMove = chooseMoveByDifficulty(pool);
         if (!chosenMove) return;
 
         const originSquare = context.getSquareElement(chosenMove.from.row, chosenMove.from.col);
@@ -135,10 +257,11 @@ const CheckersAI = (() => {
             return;
         }
         clearThinkingTimeout();
+        const thinkingDelay = getThinkingDelay();
         context.state.aiMoveTimeout = setTimeout(() => {
             context.state.aiMoveTimeout = null;
             performMove();
-        }, THINKING_DELAY);
+        }, thinkingDelay);
     };
 
     return {
