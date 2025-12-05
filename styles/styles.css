@@ -261,10 +261,6 @@ h1::after {
     box-shadow: 0 18px 28px rgba(0, 0, 0, 0.45);
 }
 
-.piece.history-animating {
-    pointer-events: none;
-    z-index: 5;
-}
 
 .piece img {
     width: 100%;

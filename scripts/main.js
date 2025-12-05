@@ -172,7 +172,7 @@ const prefersReducedMotion = () => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
-const animatePieceMovement = (piece, targetSquare) => {
+const movePieceWithAnimation = (piece, targetSquare) => {
     const startRect = piece.getBoundingClientRect();
     targetSquare.appendChild(piece);
 
@@ -180,7 +180,7 @@ const animatePieceMovement = (piece, targetSquare) => {
         piece.classList.remove('piece-moving');
         piece.style.transition = '';
         piece.style.transform = '';
-        return;
+        return Promise.resolve();
     }
 
     const endRect = piece.getBoundingClientRect();
@@ -191,7 +191,7 @@ const animatePieceMovement = (piece, targetSquare) => {
         piece.classList.remove('piece-moving');
         piece.style.transition = '';
         piece.style.transform = '';
-        return;
+        return Promise.resolve();
     }
 
     piece.classList.add('piece-moving');
@@ -204,24 +204,30 @@ const animatePieceMovement = (piece, targetSquare) => {
         piece.style.transform = '';
     });
 
-    let fallbackTimeout;
-    const clearMovementState = (event) => {
-        if (event && event.propertyName && event.propertyName !== 'transform') {
-            return;
-        }
-        piece.classList.remove('piece-moving');
-        piece.style.transition = '';
-        if (!event) {
-            piece.style.transform = '';
-        }
-        piece.removeEventListener('transitionend', clearMovementState);
-        if (fallbackTimeout) {
-            clearTimeout(fallbackTimeout);
-        }
-    };
+    return new Promise((resolve) => {
+        let fallbackTimeout;
+        const clearMovementState = (event) => {
+            if (event && event.propertyName && event.propertyName !== 'transform') {
+                return;
+            }
+            piece.classList.remove('piece-moving');
+            piece.style.transition = '';
+            if (!event) {
+                piece.style.transform = '';
+            }
+            piece.removeEventListener('transitionend', clearMovementState);
+            if (fallbackTimeout) {
+                clearTimeout(fallbackTimeout);
+            }
+            resolve();
+        };
+        piece.addEventListener('transitionend', clearMovementState);
+        fallbackTimeout = setTimeout(clearMovementState, 420);
+    });
+};
 
-    piece.addEventListener('transitionend', clearMovementState);
-    fallbackTimeout = setTimeout(clearMovementState, 400);
+const animatePieceMovement = (piece, targetSquare) => {
+    movePieceWithAnimation(piece, targetSquare);
 };
 
 const updatePieceVisuals = (piece, isKing) => {
@@ -267,13 +273,32 @@ const cloneCoords = (coords) => (coords ? { row: coords.row, col: coords.col } :
 const renderBoardFromState = () => {
     if (!boardSquares.length) return;
     boardSquares.forEach((square) => {
-        square.innerHTML = '';
         const row = Number(square.dataset.row);
         const col = Number(square.dataset.col);
         const pieceData = CheckersRules.getPiece(boardState, row, col);
-        if (!pieceData) return;
-        const renderedPiece = createPiece(pieceData.color, pieceData.isKing);
-        square.appendChild(renderedPiece);
+        const existingPiece = square.querySelector('.piece');
+
+        if (!pieceData && existingPiece) {
+            square.innerHTML = '';
+            return;
+        }
+
+        if (pieceData && !existingPiece) {
+            const renderedPiece = createPiece(pieceData.color, pieceData.isKing);
+            square.appendChild(renderedPiece);
+            return;
+        }
+
+        if (pieceData && existingPiece) {
+            const existingColor = existingPiece.dataset.color;
+            if (existingColor !== pieceData.color) {
+                square.innerHTML = '';
+                const replacement = createPiece(pieceData.color, pieceData.isKing);
+                square.appendChild(replacement);
+                return;
+            }
+            updatePieceVisuals(existingPiece, pieceData.isKing);
+        }
     });
 };
 
@@ -448,28 +473,8 @@ const animateSnapshotTransition = async (currentSnapshot, targetSnapshot) => {
         return;
     }
 
-    const startRect = fromSquare.getBoundingClientRect();
-    const endRect = toSquare.getBoundingClientRect();
-    const deltaX = endRect.left - startRect.left;
-    const deltaY = endRect.top - startRect.top;
-
-    piece.classList.add('history-animating');
-    piece.style.transition = 'transform 360ms cubic-bezier(0.22, 1, 0.36, 1)';
-    piece.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-
-    await new Promise((resolve) => {
-        const finish = () => {
-            piece.removeEventListener('transitionend', finish);
-            resolve();
-        };
-        piece.addEventListener('transitionend', finish, { once: true });
-        setTimeout(finish, 480);
-    });
-
+    await movePieceWithAnimation(piece, toSquare);
     applySnapshot(targetSnapshot);
-    piece.style.transition = '';
-    piece.style.transform = '';
-    piece.classList.remove('history-animating');
 };
 
 const undoMoves = async () => {
