@@ -34,11 +34,16 @@ So here we have it folks, last week of siege, one last project, really good time
 
 ## How the AI works
 
-The lonely clanker now comes in three moods. After you pick the AI as your opponent you can choose how spicy the matchup should be:
+The lonely clanker now comes in three moods. After you pick the AI as your opponent you can choose how difficult the matchup should be:
 
-- `easy` keeps things easy and has quick reactions and picks a completely random legal move. Expect plenty of blunders.
-- `medium` slows down a bit and scores every option using a heuristic: captures are prized, kings are valued more, central control matters and pushing toward promotion rows is rewarded. The AI grabs one of the best-scoring moves (ties are broken at random, so it still feels a little human).
-- `hard` takes a moment to think, simulates your most annoying moves, and picks the move that keeps the evaluation advantage. It uses the same heuristic as medium to judge boards but mixes in a shallow counter-move search so it avoids obvious traps.
+- `easy`: pause of ~350ms and samples a uniformly random move from the legal pool. It obeys forced captures but performs no scoring.
+- `medium`: pause of ~550ms and evaluates each move with a deterministic heuristic that gets a small ±0.05 delta to prevent identical playthroughs:
+    - +10 for any capture, plus +6 if the captured piece is a king or +3 if it is a man;
+    - +5.5 for landing on the promotion row; otherwise +0.2 per square of forward progress toward that row;
+    - +0.4 if the moving piece is already a king;
+    - central columns receive up to +1 based on proximity to the board midpoint.
+    All moves sharing the highest score form a candidate list, and one is chosen at random from that shortlist.
+- `hard`: pause of ~750ms, applies the same heuristic (nice word you got there), and then performs a single-ply minimax pass: it does a  demo of every opponent reply using the current board rules, checks the resulting board state (kings=5, men=3, plus centrality and promotion-distance bonuses), and keeps the move whose worst reply still outputs the best score for itselffl. Positions with no opponent replies get an additional stability offset before selection.
 
-Long capture chains reuse the same difficulty logic, with delay timings tuned per level so easy feels fast while hard goes slow (im so articulate with words).
+Capture chain follow-ups reuse the same decision logic per difficulty with shorter delays (220/320/380ms). The AI only queues a move when it is its turn, follows mandatory captures, and always routes execution through the same scoring model so behavior stays normal across games.
 
