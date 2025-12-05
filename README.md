@@ -20,7 +20,7 @@ So here we have it folks, last week of siege, one last project, really good time
     - [x] Have legal moves
     - [x] Have `chess.com` style thing that shows where player can move
     - [x] Have a red outline circle for something that the player can capture
-- [x] an ai to play again
+- [x] an ai to play against
     - [x] variable difficulty?
     - [x] togglable
 - [x] Custom board setup
@@ -38,7 +38,7 @@ The lonely clanker now comes in three moods. After you pick the AI as your oppon
 
 - `easy`: pause of ~350ms and samples a uniformly random move from the legal pool. It obeys forced captures but performs no scoring.
 - `medium`: pause of ~550ms and evaluates each move with a deterministic heuristic that gets a small ±0.05 delta to prevent identical playthroughs:
-    - +10 for any capture, plus +6 if the captured piece is a king or +3 if it is a man;
+    - +10 for any capture, plus +6 if the captured piece is a king or +3 if it is a man (normal);
     - +5.5 for landing on the promotion row; otherwise +0.2 per square of forward progress toward that row;
     - +0.4 if the moving piece is already a king;
     - central columns receive up to +1 based on proximity to the board midpoint.
