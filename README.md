@@ -29,7 +29,7 @@ So here we have it folks, last week of siege, one last project, really good time
 
 ## Tech stack
 
-- Vanilla HTML + CSS for layout and styling (no frameworks, just vibes).
+- Vanilla HTML + CSS for layout and styling
 - Plain JavaScript for all the game logic and DOM wrangling.
 
 ## How the AI works
