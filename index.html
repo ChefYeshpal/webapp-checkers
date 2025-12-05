@@ -62,6 +62,14 @@
     <div class="container game-container game-hidden">
         <h1>Lonely Checkers :')</h1>
         <div class="game-board" id="gameBoard"></div>
+        <div class="move-controls" aria-label="Move controls">
+            <button type="button" class="move-button" id="undoButton" disabled>
+                <span class="move-button-label">Undo</span>
+            </button>
+            <button type="button" class="move-button" id="redoButton" disabled>
+                <span class="move-button-label">Redo</span>
+            </button>
+        </div>
     </div>
     <div class="result-overlay is-hidden" id="resultOverlay">
         <div class="result-dialog">

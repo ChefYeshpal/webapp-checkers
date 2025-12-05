@@ -21,6 +21,8 @@ const resultSecondary = document.getElementById('resultSecondary');
 const resultAction = document.getElementById('resultAction');
 const customizeBoardTrigger = document.getElementById('customizeBoardTrigger');
 const notificationElement = document.getElementById('moveNotification');
+const undoButton = document.getElementById('undoButton');
+const redoButton = document.getElementById('redoButton');
 let boardSquares = [];
 let boardState = CheckersRules.createEmptyBoard();
 
@@ -32,6 +34,7 @@ const state = {
     activeChainPiece: null,
     gameOver: true,
     lastMoveSquares: { from: null, to: null },
+    lastMoveCoords: { from: null, to: null },
     notificationTimeout: null,
     opponentType: 'ai',
     humanColor: null,
@@ -40,7 +43,9 @@ const state = {
     aiMoveTimeout: null,
     pendingPlayerColor: null,
     aiDifficulty: 'medium',
-    boardSize: CheckersRules.getBoardSize()
+    boardSize: CheckersRules.getBoardSize(),
+    history: [],
+    future: []
 };
 
 const FORCE_MOVE_MESSAGE = 'Move is not allowed';
@@ -254,6 +259,67 @@ const placePieceOnSquare = (square, color, isKing = false) => {
     return piece;
 };
 
+const cloneBoardState = (board) => board.map((row) => row.map((cell) => (cell ? { ...cell } : null)));
+
+const cloneCoords = (coords) => (coords ? { row: coords.row, col: coords.col } : null);
+
+const renderBoardFromState = () => {
+    if (!boardSquares.length) return;
+    boardSquares.forEach((square) => {
+        square.innerHTML = '';
+        const row = Number(square.dataset.row);
+        const col = Number(square.dataset.col);
+        const pieceData = CheckersRules.getPiece(boardState, row, col);
+        if (!pieceData) return;
+        const renderedPiece = createPiece(pieceData.color, pieceData.isKing);
+        square.appendChild(renderedPiece);
+    });
+};
+
+// wow so long
+const applyLastMoveHighlightsFromCoords = () => {
+    const { from, to } = state.lastMoveCoords;
+    if (from) {
+        const square = getSquareElement(from.row, from.col);
+        if (square) {
+            square.classList.add('last-move-from');
+            state.lastMoveSquares.from = square;
+        }
+    }
+    if (to) {
+        const square = getSquareElement(to.row, to.col);
+        if (square) {
+            square.classList.add('last-move-to');
+            state.lastMoveSquares.to = square;
+        }
+    }
+};
+
+const createSnapshot = () => ({
+    board: cloneBoardState(boardState),
+    currentPlayer: state.currentPlayer,
+    lastMoveCoords: {
+        from: cloneCoords(state.lastMoveCoords.from),
+        to: cloneCoords(state.lastMoveCoords.to)
+    }
+});
+
+const updateUndoRedoButtons = () => {
+    if (!undoButton || !redoButton) return;
+    undoButton.disabled = state.history.length <= 1;
+    redoButton.disabled = state.future.length === 0;
+};
+
+const recordSnapshot = () => {
+    const snapshot = createSnapshot();
+    state.history.push(snapshot);
+    state.future = [];
+    updateUndoRedoButtons();
+};
+
+const getHistoryStepSize = () => (state.opponentType === 'ai' ? 2 : 1);
+
+
 const selectPiece = (piece) => {
     if (state.selectedPiece && state.selectedPiece !== piece) {
         state.selectedPiece.classList.remove('selected');
@@ -272,6 +338,61 @@ const clearSelection = () => {
     clearHighlights();
 };
 
+const applySnapshot = (snapshot) => {
+    if (!snapshot) return;
+    CheckersAI.clearThinkingTimeout();
+    boardState = cloneBoardState(snapshot.board);
+    CheckersAI.configure({ boardState });
+    clearSelection();
+    state.draggedPiece = null;
+    clearForcedMoveHighlights();
+    clearLastMoveHighlights();
+    state.lastMoveCoords = {
+        from: cloneCoords(snapshot.lastMoveCoords?.from),
+        to: cloneCoords(snapshot.lastMoveCoords?.to)
+    };
+    renderBoardFromState();
+    applyLastMoveHighlightsFromCoords();
+    state.currentPlayer = snapshot.currentPlayer;
+    updateForcedMoveHighlights();
+    hideNotification();
+
+    const status = evaluateGameState();
+    if (status.status !== 'ongoing') {
+        endGame(status);
+    } else {
+        state.gameOver = false;
+        hideResultOverlay();
+        CheckersAI.queueMoveIfNeeded();
+    }
+    updateUndoRedoButtons();
+};
+
+const undoMoves = () => {
+    if (state.history.length <= 1) return;
+    const steps = Math.min(getHistoryStepSize(), state.history.length - 1);
+    if (steps <= 0) return;
+    for (let i = 0; i < steps; i++) {
+        state.future.push(state.history.pop());
+    }
+    const snapshot = state.history[state.history.length - 1];
+    applySnapshot(snapshot);
+};
+
+const redoMoves = () => {
+    if (!state.future.length) return;
+    const stepSize = getHistoryStepSize();
+    let snapshot = null;
+    for (let i = 0; i < stepSize; i++) {
+        if (!state.future.length) break;
+        snapshot = state.future.pop();
+        state.history.push(snapshot);
+    }
+    if (snapshot) {
+        applySnapshot(snapshot);
+    }
+};
+
 const clearHighlights = () => {
     highlightedSquares.forEach((square) => square.classList.remove('highlight-move'));
     highlightedSquares.clear();
@@ -287,10 +408,17 @@ const clearLastMoveHighlights = () => {
         state.lastMoveSquares.to.classList.remove('last-move-to');
     }
     state.lastMoveSquares = { from: null, to: null };
+    state.lastMoveCoords = { from: null, to: null };
 };
 
 const setLastMoveHighlights = (fromSquare, toSquare) => {
     clearLastMoveHighlights();
+    const fromCoords = fromSquare
+        ? { row: Number(fromSquare.dataset.row), col: Number(fromSquare.dataset.col) }
+        : null;
+    const toCoords = toSquare
+        ? { row: Number(toSquare.dataset.row), col: Number(toSquare.dataset.col) }
+        : null;
     if (fromSquare) {
         fromSquare.classList.add('last-move-from');
         state.lastMoveSquares.from = fromSquare;
@@ -299,6 +427,7 @@ const setLastMoveHighlights = (fromSquare, toSquare) => {
         toSquare.classList.add('last-move-to');
         state.lastMoveSquares.to = toSquare;
     }
+    state.lastMoveCoords = { from: fromCoords, to: toCoords };
 };
 
 // brr go round round
@@ -477,6 +606,10 @@ const handleResultAction = () => {
     hideDifficultyPrompt();
     clearForcedMoveHighlights();
     clearLastMoveHighlights();
+    state.history = [];
+    state.future = [];
+    state.lastMoveCoords = { from: null, to: null };
+    updateUndoRedoButtons();
 };
 
 const highlightAvailableMoves = (legal) => {
@@ -753,6 +886,7 @@ const executeMove = (move, automatedContext = null) => {
     state.currentPlayer = activeColor === 'black' ? 'red' : 'black';
     logDebug('Turn switched', { currentPlayer: state.currentPlayer });
     updateForcedMoveHighlights();
+    recordSnapshot();
     const gameStatus = evaluateGameState();
     if (gameStatus.status !== 'ongoing') {
         endGame(gameStatus);
@@ -842,6 +976,11 @@ const startGame = (playerColor) => {
     state.aiColor = state.opponentType === 'ai' ? (playerColor === 'black' ? 'red' : 'black') : null;
     state.pendingPlayerColor = null;
     updateForcedMoveHighlights();
+    state.history = [];
+    state.future = [];
+    state.lastMoveCoords = { from: null, to: null };
+    recordSnapshot();
+    updateUndoRedoButtons();
     logDebug('Game started', { playerColor });
     gameContainer.classList.remove('game-hidden');
     introOverlay.classList.add('is-hidden');
@@ -878,6 +1017,18 @@ resultAction.addEventListener('click', handleResultAction);
 if (customizeBoardTrigger) {
     customizeBoardTrigger.addEventListener('click', () => {
         openCustomBoardDialog();
+    });
+}
+
+if (undoButton) {
+    undoButton.addEventListener('click', () => {
+        undoMoves();
+    });
+}
+
+if (redoButton) {
+    redoButton.addEventListener('click', () => {
+        redoMoves();
     });
 }
 
@@ -948,3 +1099,5 @@ gameBoard.addEventListener('dragover', handleDragOver);
 gameBoard.addEventListener('drop', handleDrop);
 gameBoard.addEventListener('dragend', handleDragEnd);
 gameBoard.addEventListener('click', handleBoardClick);
+
+updateUndoRedoButtons();
