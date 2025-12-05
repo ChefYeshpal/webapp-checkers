@@ -23,6 +23,7 @@ const customizeBoardTrigger = document.getElementById('customizeBoardTrigger');
 const notificationElement = document.getElementById('moveNotification');
 const undoButton = document.getElementById('undoButton');
 const redoButton = document.getElementById('redoButton');
+const HISTORY_ANIMATION_CLASSES = ['board-anim-undo', 'board-anim-redo'];
 let boardSquares = [];
 let boardState = CheckersRules.createEmptyBoard();
 
@@ -169,6 +170,14 @@ const prefersReducedMotion = () => {
         return false;
     }
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+};
+
+const triggerHistoryAnimation = (mode) => {
+    if (!gameBoard || prefersReducedMotion()) return;
+    const targetClass = mode === 'redo' ? 'board-anim-redo' : 'board-anim-undo';
+    HISTORY_ANIMATION_CLASSES.forEach((cls) => gameBoard.classList.remove(cls));
+    void gameBoard.offsetWidth;
+    gameBoard.classList.add(targetClass);
 };
 
 const animatePieceMovement = (piece, targetSquare) => {
@@ -377,6 +386,7 @@ const undoMoves = () => {
     }
     const snapshot = state.history[state.history.length - 1];
     applySnapshot(snapshot);
+    triggerHistoryAnimation('undo');
 };
 
 const redoMoves = () => {
@@ -390,6 +400,7 @@ const redoMoves = () => {
     }
     if (snapshot) {
         applySnapshot(snapshot);
+        triggerHistoryAnimation('redo');
     }
 };
 
@@ -1099,5 +1110,13 @@ gameBoard.addEventListener('dragover', handleDragOver);
 gameBoard.addEventListener('drop', handleDrop);
 gameBoard.addEventListener('dragend', handleDragEnd);
 gameBoard.addEventListener('click', handleBoardClick);
+
+if (gameBoard) {
+    gameBoard.addEventListener('animationend', (event) => {
+        if (event.animationName === 'boardUndoPulse' || event.animationName === 'boardRedoPulse') {
+            HISTORY_ANIMATION_CLASSES.forEach((cls) => gameBoard.classList.remove(cls));
+        }
+    });
+}
 
 updateUndoRedoButtons();
