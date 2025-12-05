@@ -23,7 +23,6 @@ const customizeBoardTrigger = document.getElementById('customizeBoardTrigger');
 const notificationElement = document.getElementById('moveNotification');
 const undoButton = document.getElementById('undoButton');
 const redoButton = document.getElementById('redoButton');
-const HISTORY_ANIMATION_CLASSES = ['board-anim-undo', 'board-anim-redo'];
 let boardSquares = [];
 let boardState = CheckersRules.createEmptyBoard();
 
@@ -46,7 +45,8 @@ const state = {
     aiDifficulty: 'medium',
     boardSize: CheckersRules.getBoardSize(),
     history: [],
-    future: []
+    future: [],
+    isAnimatingHistory: false
 };
 
 const FORCE_MOVE_MESSAGE = 'Move is not allowed';
@@ -172,14 +172,6 @@ const prefersReducedMotion = () => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 };
 
-const triggerHistoryAnimation = (mode) => {
-    if (!gameBoard || prefersReducedMotion()) return;
-    const targetClass = mode === 'redo' ? 'board-anim-redo' : 'board-anim-undo';
-    HISTORY_ANIMATION_CLASSES.forEach((cls) => gameBoard.classList.remove(cls));
-    void gameBoard.offsetWidth;
-    gameBoard.classList.add(targetClass);
-};
-
 const animatePieceMovement = (piece, targetSquare) => {
     const startRect = piece.getBoundingClientRect();
     targetSquare.appendChild(piece);
@@ -285,6 +277,57 @@ const renderBoardFromState = () => {
     });
 };
 
+const arePiecesEqual = (a, b) => {
+    if (!a && !b) return true;
+    if (!a || !b) return false;
+    return a.color === b.color && Boolean(a.isKing) === Boolean(b.isKing);
+};
+
+const computeSnapshotDelta = (currentSnapshot, targetSnapshot) => {
+    const removed = [];
+    const added = [];
+    const rows = currentSnapshot.board.length;
+    const cols = currentSnapshot.board[0]?.length || 0;
+
+    for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+            const currentCell = currentSnapshot.board[row][col];
+            const targetCell = targetSnapshot.board[row][col];
+            if (arePiecesEqual(currentCell, targetCell)) continue;
+
+            if (currentCell && !targetCell) {
+                removed.push({ row, col, piece: { ...currentCell } });
+            } else if (!currentCell && targetCell) {
+                added.push({ row, col, piece: { ...targetCell } });
+            } else if (currentCell && targetCell) {
+                removed.push({ row, col, piece: { ...currentCell } });
+                added.push({ row, col, piece: { ...targetCell } });
+            }
+        }
+    }
+
+    let move = null;
+    for (let i = 0; i < removed.length; i++) {
+        const removedEntry = removed[i];
+        const matchIndex = added.findIndex((entry) => entry.piece.color === removedEntry.piece.color);
+        if (matchIndex !== -1) {
+            move = {
+                from: { row: removedEntry.row, col: removedEntry.col, piece: { ...removedEntry.piece } },
+                to: { row: added[matchIndex].row, col: added[matchIndex].col, piece: { ...added[matchIndex].piece } }
+            };
+            removed.splice(i, 1);
+            added.splice(matchIndex, 1);
+            break;
+        }
+    }
+
+    return {
+        move,
+        piecesToRemove: removed,
+        piecesToAdd: added
+    };
+};
+
 // wow so long
 const applyLastMoveHighlightsFromCoords = () => {
     const { from, to } = state.lastMoveCoords;
@@ -315,8 +358,10 @@ const createSnapshot = () => ({
 
 const updateUndoRedoButtons = () => {
     if (!undoButton || !redoButton) return;
-    undoButton.disabled = state.history.length <= 1;
-    redoButton.disabled = state.future.length === 0;
+    const disableUndo = state.isAnimatingHistory || state.history.length <= 1;
+    const disableRedo = state.isAnimatingHistory || state.future.length === 0;
+    undoButton.disabled = disableUndo;
+    redoButton.disabled = disableRedo;
 };
 
 const recordSnapshot = () => {
@@ -377,30 +422,93 @@ const applySnapshot = (snapshot) => {
     updateUndoRedoButtons();
 };
 
-const undoMoves = () => {
-    if (state.history.length <= 1) return;
-    const steps = Math.min(getHistoryStepSize(), state.history.length - 1);
-    if (steps <= 0) return;
-    for (let i = 0; i < steps; i++) {
-        state.future.push(state.history.pop());
+const animateSnapshotTransition = async (currentSnapshot, targetSnapshot) => {
+    if (!targetSnapshot) return;
+    if (prefersReducedMotion()) {
+        applySnapshot(targetSnapshot);
+        return;
     }
-    const snapshot = state.history[state.history.length - 1];
-    applySnapshot(snapshot);
-    triggerHistoryAnimation('undo');
+
+    const delta = computeSnapshotDelta(currentSnapshot, targetSnapshot);
+    if (!delta.move) {
+        applySnapshot(targetSnapshot);
+        return;
+    }
+
+    const fromSquare = getSquareElement(delta.move.from.row, delta.move.from.col);
+    const toSquare = getSquareElement(delta.move.to.row, delta.move.to.col);
+    if (!fromSquare || !toSquare) {
+        applySnapshot(targetSnapshot);
+        return;
+    }
+
+    const piece = fromSquare.querySelector('.piece');
+    if (!piece) {
+        applySnapshot(targetSnapshot);
+        return;
+    }
+
+    const startRect = fromSquare.getBoundingClientRect();
+    const endRect = toSquare.getBoundingClientRect();
+    const deltaX = endRect.left - startRect.left;
+    const deltaY = endRect.top - startRect.top;
+
+    piece.classList.add('history-animating');
+    piece.style.transition = 'transform 360ms cubic-bezier(0.22, 1, 0.36, 1)';
+    piece.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+    await new Promise((resolve) => {
+        const finish = () => {
+            piece.removeEventListener('transitionend', finish);
+            resolve();
+        };
+        piece.addEventListener('transitionend', finish, { once: true });
+        setTimeout(finish, 480);
+    });
+
+    applySnapshot(targetSnapshot);
+    piece.style.transition = '';
+    piece.style.transform = '';
+    piece.classList.remove('history-animating');
 };
 
-const redoMoves = () => {
-    if (!state.future.length) return;
-    const stepSize = getHistoryStepSize();
-    let snapshot = null;
-    for (let i = 0; i < stepSize; i++) {
-        if (!state.future.length) break;
-        snapshot = state.future.pop();
-        state.history.push(snapshot);
+const undoMoves = async () => {
+    if (state.isAnimatingHistory || state.history.length <= 1) return;
+    const steps = Math.min(getHistoryStepSize(), state.history.length - 1);
+    if (steps <= 0) return;
+    state.isAnimatingHistory = true;
+    updateUndoRedoButtons();
+    try {
+        for (let i = 0; i < steps; i++) {
+            const currentSnapshot = state.history[state.history.length - 1];
+            const targetSnapshot = state.history[state.history.length - 2];
+            if (!currentSnapshot || !targetSnapshot) break;
+            await animateSnapshotTransition(currentSnapshot, targetSnapshot);
+            state.future.push(state.history.pop());
+        }
+    } finally {
+        state.isAnimatingHistory = false;
+        updateUndoRedoButtons();
     }
-    if (snapshot) {
-        applySnapshot(snapshot);
-        triggerHistoryAnimation('redo');
+};
+
+const redoMoves = async () => {
+    if (state.isAnimatingHistory || !state.future.length) return;
+    const steps = Math.min(getHistoryStepSize(), state.future.length);
+    if (steps <= 0) return;
+    state.isAnimatingHistory = true;
+    updateUndoRedoButtons();
+    try {
+        for (let i = 0; i < steps; i++) {
+            const nextSnapshot = state.future[state.future.length - 1];
+            const currentSnapshot = state.history[state.history.length - 1];
+            if (!nextSnapshot || !currentSnapshot) break;
+            await animateSnapshotTransition(currentSnapshot, nextSnapshot);
+            state.history.push(state.future.pop());
+        }
+    } finally {
+        state.isAnimatingHistory = false;
+        updateUndoRedoButtons();
     }
 };
 
@@ -740,6 +848,10 @@ const canInteractWithPiece = (piece) => {
         logDebug('Interaction blocked: game over');
         return false;
     }
+    if (state.isAnimatingHistory) {
+        logDebug('Interaction blocked: history animation in progress');
+        return false;
+    }
     const square = piece.parentElement;
     if (!square) {
         logDebug('Piece has no square, interaction blocked');
@@ -809,7 +921,7 @@ const handlePieceSelection = (piece) => {
 const getMoveForDestination = (row, col) => state.moveLookup.get(`${row}-${col}`);
 
 const attemptMoveToSquare = (square) => {
-    if (state.gameOver) return;
+    if (state.gameOver || state.isAnimatingHistory) return;
     if (!state.selectedPiece || !square) return;
     const row = Number(square.dataset.row);
     const col = Number(square.dataset.col);
@@ -907,7 +1019,7 @@ const executeMove = (move, automatedContext = null) => {
 };
 
 const handleDragStart = (event) => {
-    if (state.gameOver) {
+    if (state.gameOver || state.isAnimatingHistory) {
         event.preventDefault();
         return;
     }
@@ -926,7 +1038,7 @@ const handleDragStart = (event) => {
 };
 
 const handleDragOver = (event) => {
-    if (state.gameOver) return;
+    if (state.gameOver || state.isAnimatingHistory) return;
     const square = event.target.closest('.square');
     if (!square || !state.draggedPiece || state.selectedPiece !== state.draggedPiece) return;
     const row = Number(square.dataset.row);
@@ -940,7 +1052,7 @@ const handleDragOver = (event) => {
 };
 
 const handleDrop = (event) => {
-    if (state.gameOver) return;
+    if (state.gameOver || state.isAnimatingHistory) return;
     event.preventDefault();
     const square = event.target.closest('.square');
     if (!square || !state.draggedPiece) return;
@@ -953,7 +1065,7 @@ const handleDragEnd = () => {
 };
 
 const handleBoardClick = (event) => {
-    if (state.gameOver) return;
+    if (state.gameOver || state.isAnimatingHistory) return;
     const piece = event.target.closest('.piece');
     if (piece) {
         if (state.selectedPiece === piece && !state.activeChainPiece) {
@@ -1033,13 +1145,13 @@ if (customizeBoardTrigger) {
 
 if (undoButton) {
     undoButton.addEventListener('click', () => {
-        undoMoves();
+        void undoMoves();
     });
 }
 
 if (redoButton) {
     redoButton.addEventListener('click', () => {
-        redoMoves();
+        void redoMoves();
     });
 }
 
@@ -1110,13 +1222,5 @@ gameBoard.addEventListener('dragover', handleDragOver);
 gameBoard.addEventListener('drop', handleDrop);
 gameBoard.addEventListener('dragend', handleDragEnd);
 gameBoard.addEventListener('click', handleBoardClick);
-
-if (gameBoard) {
-    gameBoard.addEventListener('animationend', (event) => {
-        if (event.animationName === 'boardUndoPulse' || event.animationName === 'boardRedoPulse') {
-            HISTORY_ANIMATION_CLASSES.forEach((cls) => gameBoard.classList.remove(cls));
-        }
-    });
-}
 
 updateUndoRedoButtons();
