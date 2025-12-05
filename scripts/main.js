@@ -33,6 +33,7 @@ const state = {
     moveLookup: new Map(),
     activeChainPiece: null,
     gameOver: true,
+    turnNumber: 0,
     lastMoveSquares: { from: null, to: null },
     lastMoveCoords: { from: null, to: null },
     notificationTimeout: null,
@@ -375,6 +376,7 @@ const applyLastMoveHighlightsFromCoords = () => {
 const createSnapshot = () => ({
     board: cloneBoardState(boardState),
     currentPlayer: state.currentPlayer,
+    turnNumber: state.turnNumber,
     lastMoveCoords: {
         from: cloneCoords(state.lastMoveCoords.from),
         to: cloneCoords(state.lastMoveCoords.to)
@@ -433,6 +435,7 @@ const applySnapshot = (snapshot) => {
     renderBoardFromState();
     applyLastMoveHighlightsFromCoords();
     state.currentPlayer = snapshot.currentPlayer;
+    state.turnNumber = typeof snapshot.turnNumber === 'number' ? snapshot.turnNumber : state.turnNumber;
     updateForcedMoveHighlights();
     hideNotification();
 
@@ -726,6 +729,7 @@ const handleResultAction = () => {
     state.aiColor = null;
     state.bottomColor = null;
     state.pendingPlayerColor = null;
+    state.turnNumber = 0;
     hideFriendPrompt();
     hideDifficultyPrompt();
     clearForcedMoveHighlights();
@@ -878,6 +882,12 @@ const canInteractWithPiece = (piece) => {
     }
     if (data.color !== state.currentPlayer) {
         logDebug('Blocked interaction with opponent piece', { requested: data.color, currentPlayer: state.currentPlayer });
+        if (state.turnNumber === 0 && data.color === 'black' && state.currentPlayer === 'red') {
+            showNotification('Red moves first.');
+        } else if (state.currentPlayer) {
+            const colorName = state.currentPlayer.charAt(0).toUpperCase() + state.currentPlayer.slice(1);
+            showNotification(`${colorName} to move.`);
+        }
         return false;
     }
     if (state.activeChainPiece && state.activeChainPiece !== piece) {
@@ -1012,6 +1022,7 @@ const executeMove = (move, automatedContext = null) => {
     clearSelection();
     setLastMoveHighlights(originSquare, targetSquare);
     state.currentPlayer = activeColor === 'black' ? 'red' : 'black';
+    state.turnNumber += 1;
     logDebug('Turn switched', { currentPlayer: state.currentPlayer });
     updateForcedMoveHighlights();
     recordSnapshot();
@@ -1094,7 +1105,7 @@ const startGame = (playerColor) => {
     hideDifficultyPrompt();
     CheckersRules.setBottomColor(playerColor);
     initializeBoard(playerColor);
-    state.currentPlayer = playerColor;
+    state.currentPlayer = 'red';
     state.draggedPiece = null;
     state.activeChainPiece = null;
     state.moveLookup = new Map();
@@ -1103,6 +1114,7 @@ const startGame = (playerColor) => {
     state.humanColor = playerColor;
     state.aiColor = state.opponentType === 'ai' ? (playerColor === 'black' ? 'red' : 'black') : null;
     state.pendingPlayerColor = null;
+    state.turnNumber = 0;
     updateForcedMoveHighlights();
     state.history = [];
     state.future = [];
