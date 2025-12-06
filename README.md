@@ -1,7 +1,7 @@
 # webapp-checkers
 
 This is a project for week 14 of [siege](https://siege.hackclub.com), where the theme is `ANYTHING`!
-I decided to make a checkers webapp, because my first project for siege was [chess](https://chefyeshpal.github.io/webapp-chess) and I thought, "what better way to end this journey than make another board game?
+I decided to make a checkers webapp, because my first project for siege was [chess](https://chefyeshpal.github.io/webapp-chess) and I thought, "what better way to end this journey than make another board game?"
 So here we have it folks, last week of siege, one last project, really good times.
 
 ## A list of thingies...
